@@ -1,0 +1,28 @@
+#include <iso646.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "fumotris.h"
+#include "term.h"
+
+struct TetrMap {
+    size_t wid;
+    size_t hgt;
+    size_t area;
+
+    int x;
+    int y;
+    u8 rot;
+
+    u8 *blks;
+};
+
+struct TetrMap NewTetrMap(size_t wid, size_t hgt);
+
+void TetrMapToTermBuf(struct TetrMap *map, struct TermBuf *term);
+
+bool TetrCollisionCheck(struct TetrMap *board, struct TetrMap *piece, int dx, int dy);
