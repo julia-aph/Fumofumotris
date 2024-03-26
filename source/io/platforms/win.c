@@ -21,9 +21,9 @@ bool WindowsInit()
     return true;
 }
 
-bool WindowsBlockInput(struct InputResult *result)
+bool WindowsBlockInput(struct InputBuffer *buf)
 {
-    return WinBlockInput(result);
+    return WinBlockInput(buf);
 }
 
 bool WindowsWait(double seconds)

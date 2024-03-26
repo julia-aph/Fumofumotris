@@ -73,39 +73,13 @@ void Loop(Ctrl *ctrl)
     falling.blks = falling_blks;
 
     for (int i = 0; i < 7779997; i++) {
+        
+
         TetrMapToTermBuf(&board, &term);
         TetrMapToTermBuf(&falling, &term);
 
         size_t size = TermBufToChars(&term, out, out_max);
-        //puts(out);
-        puts("\x1b[H");
-
-        //falling.y += 1;
-
-        for(int j = 0; j < ctrl->capacity; j++) {
-            printf("val:%u, is_down:%u, x:%u, y:%u, press:%f, relse:%f\n",
-            ctrl->bkts[j].axis.data.axis.value, ctrl->bkts[j].axis.data.axis.is_down,
-            ctrl->bkts[j].axis.data.joystick.x, ctrl->bkts[j].axis.data.joystick.y,
-            ctrl->bkts[j].axis.last_pressed, ctrl->bkts[j].axis.last_released);
-        }
-        /*
-        struct Axis *axis = CtrlGet(ctrl, LEFT, KEY);
-        struct Axis *right = CtrlGet(ctrl, RIGHT, KEY);
-
-        printf("ctrl:%u\n", axis);
-        printf("ctrl:%u\n", right);
-
-        printf("%f\n", axis->last_pressed);
-
-        if (axis->data.axis.is_down) {
-            printf("left");
-            falling.x -= 1;
-        }
-
-        if (right->data.axis.is_down) {
-            printf("right");
-            falling.x += 1;
-        }*/
+        puts(out);
 
         WindowsWait(0.1);
     }
@@ -115,8 +89,8 @@ int main()
 {
     WindowsInit();
 
-    struct ctrl_bkt bkts[16];
-    Ctrl ctrl = NewCtrl(bkts, 16);
+    struct ctrl_bkt bkts[13];
+    Ctrl ctrl = NewCtrl(bkts, 13);
 
     for (size_t i = 0; i < 9; i++) {
         CtrlMap(&ctrl, key_binds[i], key_codes[i], KEY);

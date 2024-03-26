@@ -1,4 +1,5 @@
 #pragma once
+#include <pthread.h>
 #include <iso646.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -9,6 +10,6 @@
 
 bool WindowsInit();
 
-bool WindowsBlockInput(struct InputResult *result);
+bool WindowsBlockInput(struct InputBuffer *buf);
 
 bool WindowsWait(double seconds);

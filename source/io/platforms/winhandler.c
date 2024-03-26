@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include "fumotris.h"
+#include "gametime.h"
 #include "input.h"
 
 struct Windows {
@@ -45,7 +46,7 @@ void set_key_record(struct InputRecord *record, KEY_EVENT_RECORD win_key)
 {
     record->type = KEY;
     record->id = win_key.wVirtualKeyCode;
-    record->data.axis.is_down = win_key.bKeyDown;
+    record->data.key.is_down = win_key.bKeyDown;
 
     if (win_key.wVirtualKeyCode == VK_ESCAPE)
         record->type = ESCAPE;
@@ -100,27 +101,31 @@ bool dispatch_record(struct InputRecord *record, INPUT_RECORD win_record)
     return true;
 }
 
-bool WinBlockInput(struct InputResult *result)
+bool WinBlockInput(struct InputBuffer *buf)
 {
-    INPUT_RECORD buf[8];
+    size_t win_size = IO_BUF_SIZE - buf->count;
+    INPUT_RECORD win_buf[win_size];
     DWORD count;
 
-    if (!ReadConsoleInput(windows.input_handle, buf, 8, &count))
+    if (!ReadConsoleInput(windows.input_handle, win_buf, win_size, &count))
         return false;
+    
+    double now = GetTime();
+    pthread_mutex_lock(&buf->mutex);
 
-    size_t unused_offset = 0;
     for (size_t i = 0; i < count; i++) {
         struct InputRecord record;
+        record.timestamp = now;
 
-        bool include = dispatch_record(&record, buf[i]);
-        if (record.type == ESCAPE)
-            return false;
+        bool include = dispatch_record(&record, win_buf[i]);
         if (!include)
-            unused_offset += 1;
+            continue;
 
-        result->buf[i - unused_offset] = record;
+        buf->records[buf->count] = record;
+        buf->count += 1;
     }
-    result->count = count - unused_offset;
+
+    pthread_mutex_unlock(&buf->mutex);
     return true;
 }
 

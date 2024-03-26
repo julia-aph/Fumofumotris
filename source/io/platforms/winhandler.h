@@ -13,6 +13,6 @@ bool WinInitTimer();
 
 bool WinInitConsole();
 
-bool WinBlockInput(struct InputResult *result);
+bool WinBlockInput(struct InputBuffer *buf);
 
 bool WinWait(double seconds);

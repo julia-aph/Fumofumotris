@@ -50,6 +50,7 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "typeinfo": "cpp",
-        "execution": "cpp"
+        "execution": "cpp",
+        "stdbool.h": "c"
     }
 }

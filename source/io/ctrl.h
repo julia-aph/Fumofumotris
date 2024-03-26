@@ -25,8 +25,10 @@ struct InputRecord {
 
     union {
         struct {
-            u32 value;
             bool is_down;
+        } key;
+        struct {
+            u64 value;
         } axis;
         struct {
             u32 x;
@@ -37,16 +39,23 @@ struct InputRecord {
     double timestamp;
 };
 
-struct InputResult {
+struct InputBuffer {
+    struct InputRecord records[IO_BUF_SIZE];
     size_t count;
-    struct InputRecord buf[IO_BUF_SIZE];
+    pthread_mutex_t mutex;
 };
+
+struct InputBuffer NewInputBuffer();
 
 struct Axis {
     union {
         struct {
             u32 value;
-            bool is_down;
+            u32 is_down : 1;
+            u32 is_up : 1;
+        } key;
+        struct {
+            u64 value;
         } axis;
         struct {
             u32 x;
@@ -83,8 +92,11 @@ typedef u32 hashtype;
 
 struct ctrl_bkt {
     hashtype bind_hash;
+    u16 bind;
     size_t index;
+
     hashtype code_hash;
+    u16 code;
 
     struct Axis axis;
 };
