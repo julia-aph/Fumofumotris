@@ -194,13 +194,15 @@ struct ctrl_bkt *get_bind_bkt(Ctrl *ctrl, size_t i)
     return &ctrl->binds.bkts[i];
 }
 
-struct code_bkt *find_code(Ctrl *ctrl, hashtype hash)
+struct code_bkt *find_code_or_set_empty(Ctrl *ctrl, u16 code, )
 {
     const size_t index = hash % ctrl->codes.capacity;
     size_t i = index;
 
     while (i != index - 1) {
         struct code_bkt *bkt = get_code_bkt(ctrl, i);
+        if (bkt->hash == search)
+            return bkt;
         if (bkt->hash == 0)
             return bkt;
         
@@ -209,7 +211,7 @@ struct code_bkt *find_code(Ctrl *ctrl, hashtype hash)
     return nullptr;
 }
 
-struct ctrl_bkt *find_bind(Ctrl *ctrl, hashtype hash)
+struct ctrl_bkt *find_bind(Ctrl *ctrl, hashtype hash, hashtype search)
 {
     const size_t index = hash % ctrl->binds.capacity;
     size_t i = index;
@@ -229,13 +231,11 @@ bool CtrlMap(Ctrl *ctrl, u16f bind, u16f code, enum InputType type)
     if (ctrl->binds.filled == ctrl->binds.capacity)
         return false;
 
-    hashtype code_hash = hash_ident(code, type);
-    struct code_bkt *code_bkt = find_code(ctrl, code_hash);
-    code_bkt->hash = code_hash;
-    code_bkt->code = code;
+    struct code_bkt *code_bkt = find_code_or_set_empty(ctrl, code, type);
+    assert(code_bkt != nullptr);
 
     hashtype bind_hash = hash_ident(bind, type);
-    struct bind_bkt *bind_bkt = find_bind(ctrl, bind_hash);
+    struct bind_bkt *bind_bkt = find_bind(ctrl, bind_hash, bind_hash);
     bind_bkt->hash = bind_hash;
     bind_bkt->bind = bind;
     bind_bkt->axis = &code_bkt->axis;
