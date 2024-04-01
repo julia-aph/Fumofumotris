@@ -6,10 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "fumotris.h"
 
-#define IO_BUF_SIZE 8
+#define IO_BUF_SIZE 16
 
 enum InputType {
     KEY,
@@ -20,8 +21,8 @@ enum InputType {
 };
 
 struct InputRecord {
-    enum InputType type;
     u16 id;
+    u8 type;
 
     union {
         struct {
@@ -36,7 +37,7 @@ struct InputRecord {
         } joystick;
     } data;
 
-    double timestamp;
+    struct timespec timestamp;
 };
 
 struct InputBuffer {
@@ -63,8 +64,8 @@ struct Axis {
         } joystick;
     } data;
 
-    double last_pressed;
-    double last_released;
+    struct timespec last_pressed;
+    struct timespec last_released;
 };
 
 enum KeyCode {
@@ -90,37 +91,42 @@ enum JoystickCode {
 
 typedef u32 hashtype;
 
-struct ctrl_bkt {
-    hashtype bind_hash;
-    u16 bind;
-    size_t index;
+struct bkt {
+    hashtype hash;
+    u16 value;
+    u8 type;
+    struct Axis *axis;
+};
 
-    hashtype code_hash;
-    u16 code;
-
-    struct Axis axis;
+struct dict {
+    size_t capacity;
+    size_t filled;
+    struct bkt *bkts;
 };
 
 struct Ctrl {
-    size_t capacity;
-    size_t filled;
-    struct ctrl_bkt *bkts;
+    struct dict codes;
+    struct dict binds;
 
+    pthread_t thread;
     pthread_mutex_t mutex;
 };
 typedef struct Ctrl Ctrl;
 
-Ctrl NewCtrl(struct ctrl_bkt *bkts_prealloc, size_t capacity);
+#define NEW_CTRL(CTRL, CODES, BINDS)    \
+    struct bkt NEW_CTRL_CODES[CODES];   \
+    struct bkt NEW_CTRL_BINDS[BINDS];   \
+    struct Axis NEW_CTRL_AXES[CODES];   \
+    CTRL = NewCtrl(                     \
+        NEW_CTRL_CODES,                 \
+        NEW_CTRL_AXES, CODES,           \
+        NEW_CTRL_BINDS, BINDS           \
+    );                                  \
 
-bool CtrlMap(Ctrl *ctrl, u16f bind, u16f code, enum InputType type);
+Ctrl NewCtrl(struct bkt *codes, struct Axis *axes, size_t c, struct bkt *binds, size_t b);
 
-struct Axis *CtrlGet(Ctrl *ctrl, u16f code, enum InputType type);
+bool CtrlMap(Ctrl *ctrl, u16f code, u16f bind, u8f type);
 
-bool CtrlUpdateKey(Ctrl *ctrl, struct InputRecord *record);
+struct Axis *CtrlGet(Ctrl *ctrl, u16f code, u8f type);
 
-bool CtrlUpdateAxis(Ctrl *ctrl, struct InputRecord *record);
-
-bool CtrlUpdateJoystick(Ctrl *ctrl, struct InputRecord *record);
-
-bool CtrlUpdateWindow(Ctrl *ctrl, struct InputRecord *record);
-
+bool CtrlPoll(Ctrl *ctrl, struct InputBuffer *buf);

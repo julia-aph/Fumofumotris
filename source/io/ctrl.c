@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <iso646.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -5,10 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "fumotris.h"
 
-#define IO_BUF_SIZE 8
+#define IO_BUF_SIZE 16
 
 enum InputType {
     KEY,
@@ -19,8 +21,8 @@ enum InputType {
 };
 
 struct InputRecord {
-    enum InputType type;
     u16 id;
+    u8 type;
 
     union {
         struct {
@@ -35,7 +37,7 @@ struct InputRecord {
         } joystick;
     } data;
 
-    double timestamp;
+    struct timespec timestamp;
 };
 
 struct InputBuffer {
@@ -53,8 +55,6 @@ struct InputBuffer NewInputBuffer()
 }
 
 struct Axis {
-    u8 type;
-
     union {
         struct {
             u32 value;
@@ -70,8 +70,8 @@ struct Axis {
         } joystick;
     } data;
 
-    double last_pressed;
-    double last_released;
+    struct timespec last_pressed;
+    struct timespec last_released;
 };
 
 enum KeyCode {
@@ -112,208 +112,220 @@ hashtype Hash(void *item, size_t size)
 
 struct ident {
     u16 id;
-    enum InputType type;
+    u8 type;
 };
 
-hashtype hash_ident(u16f id, enum InputType type)
+hashtype hash_ident(u16f value, u8f type)
 {
-    struct ident obj = { id, type };
-    return Hash(&obj, sizeof(struct ident));
+    struct ident id = { value, type };
+    return Hash(&id, sizeof(struct ident));
 }
 
-struct code_bkt {
+struct bkt {
     hashtype hash;
-    u16 code;
-    struct Axis axis;
-};
-
-struct bind_bkt {
-    hashtype hash;
-    u16 bind;
+    u16 value;
+    u8 type;
     struct Axis *axis;
 };
 
+struct dict {
+    size_t capacity;
+    size_t filled;
+    struct bkt *bkts;
+};
+
 struct Ctrl {
-    struct {
-        size_t capacity;
-        size_t filled;
-        struct code_bkt *bkts;
-    } codes;
+    struct dict codes;
+    struct dict binds;
 
-    struct {
-        size_t capacity;
-        size_t filled;
-        struct bind_bkt *bkts;
-    } binds;
-
+    pthread_t thread;
     pthread_mutex_t mutex;
 };
 typedef struct Ctrl Ctrl;
 
-Ctrl NewCtrl(struct code_bkt *codes, size_t c, struct bind_bkt *binds, size_t b)
+Ctrl NewCtrl(struct bkt *codes, struct Axis *axes, size_t c, struct bkt *binds, size_t b)
 {
-    memset(codes, 0, sizeof(struct code_bkt) * c);
-    memset(binds, 0, sizeof(struct bind_bkt) * b);
+    memset(codes, 0, sizeof(struct bkt) * c);
+    memset(axes, 0, sizeof(struct Axis) * c);
+    memset(binds, 0, sizeof(struct bkt) * b);
+
+    for (size_t i = 0; i < c; i++) {
+        codes[i].axis = &axes[i];
+    }
 
     Ctrl ctrl;
+
+    ctrl.codes.capacity = c;
+    ctrl.codes.filled = 0;
     ctrl.codes.bkts = codes;
+
+    ctrl.binds.capacity = b;
+    ctrl.binds.filled = 0;
     ctrl.binds.bkts = binds;
+
     ctrl.mutex = PTHREAD_MUTEX_INITIALIZER;
 
     return ctrl;
 }
 
-void CtrlPoll(struct InputBuffer *buf)
+struct bkt *get_bkt(struct dict *dict, size_t i)
 {
-    for (size_t i = 0; i < buf->count; i++) {
-        struct InputRecord *rec = &buf->records[i];
+    assert(i < dict->capacity);
+    return &dict->bkts[i];
+}
 
-        switch (rec->type) {
-        case KEY:
-            key_update();
-            break;
-        case AXIS:
-            axis_update();
-            break;
-        case JOYSTICK:
-            joystick_update();
-            break;
+void set_bkt(struct bkt *bkt, hashtype hash, u16f value, u8f type)
+{
+    bkt->hash = hash;
+    bkt->value = value;
+    bkt->type = type;
+}
+
+size_t wrap(size_t x, size_t wrap)
+{
+    return x % (SIZE_MAX - wrap + 1);
+}
+
+bool find_or_set(struct dict *dict, struct bkt **out, u16f value, u8f type)
+{
+    hashtype hash = hash_ident(value, type);
+    const size_t index = hash % dict->capacity;
+
+    size_t i = index;
+    while (i != wrap(index - 1, dict->capacity)) {
+        struct bkt *bkt = get_bkt(dict, i);
+
+        if (bkt->hash == 0) {
+            set_bkt(bkt, hash, value, type);
+            dict->filled += 1;
+            *out = bkt;
+            return false;
         }
-    }
-}
 
-struct ctrl_bkt *get_code_bkt(Ctrl *ctrl, size_t i)
-{
-    assert(i < ctrl->codes.capacity);
-    return &ctrl->codes.bkts[i];
-}
-
-struct ctrl_bkt *get_bind_bkt(Ctrl *ctrl, size_t i)
-{
-    assert(i < ctrl->binds.capacity);
-    return &ctrl->binds.bkts[i];
-}
-
-struct code_bkt *find_code_or_set_empty(Ctrl *ctrl, u16 code, )
-{
-    const size_t index = hash % ctrl->codes.capacity;
-    size_t i = index;
-
-    while (i != index - 1) {
-        struct code_bkt *bkt = get_code_bkt(ctrl, i);
-        if (bkt->hash == search)
-            return bkt;
-        if (bkt->hash == 0)
-            return bkt;
+        if (bkt->value == value and bkt->type == type) {
+            *out = bkt;
+            return true;
+        }
         
-        i = (i + 1) % ctrl->codes.capacity;
+        i = (i + 1) % dict->capacity;
     }
+
+    *out = nullptr;
+    return false;
+}
+
+struct bkt *find(struct dict *dict, u16f value, u8f type)
+{
+    hashtype hash = hash_ident(value, type);
+    const size_t index = hash % dict->capacity;
+
+    size_t i = index;
+    while (i != wrap(index - 1, dict->capacity)) {
+        struct bkt *bkt = get_bkt(dict, i);
+        if (bkt->hash == 0)
+            goto next;
+
+        if (bkt->value == value and bkt->type == type) {
+            return bkt;
+        }
+next:
+        i = (i + 1) % dict->capacity;
+    };
+
     return nullptr;
 }
 
-struct ctrl_bkt *find_bind(Ctrl *ctrl, hashtype hash, hashtype search)
+struct Axis *find_axis(struct dict *dict, u16f value, u8f type)
 {
-    const size_t index = hash % ctrl->binds.capacity;
-    size_t i = index;
-
-    while (i != index - 1) {
-        struct bind_bkt *bkt = get_bind_bkt(ctrl, i);
-        if (bkt->hash == 0)
-            return bkt;
-        
-        i = (i + 1) % ctrl->binds.capacity;
-    }
-    return nullptr;
-}
-
-bool CtrlMap(Ctrl *ctrl, u16f bind, u16f code, enum InputType type)
-{
-    if (ctrl->binds.filled == ctrl->binds.capacity)
-        return false;
-
-    struct code_bkt *code_bkt = find_code_or_set_empty(ctrl, code, type);
-    assert(code_bkt != nullptr);
-
-    hashtype bind_hash = hash_ident(bind, type);
-    struct bind_bkt *bind_bkt = find_bind(ctrl, bind_hash, bind_hash);
-    bind_bkt->hash = bind_hash;
-    bind_bkt->bind = bind;
-    bind_bkt->axis = &code_bkt->axis;
-
-    ctrl->binds.filled += 1;
-
-    return true;
-}
-
-struct Axis *find_bind_axis(Ctrl *ctrl, u16f bind, enum InputType type)
-{
-    hashtype bind_hash = hash_ident(bind, KEY);
-    struct ctrl_bkt *bind_bkt = find_bind(ctrl, bind_hash, bind_hash);
-    if (bind_bkt == nullptr)
+    struct bkt *bkt = find(dict, value, type);
+    if (bkt == nullptr)
         return nullptr;
 
-    return &get_bkt(ctrl, bind_bkt->index)->axis;
+    return bkt->axis;
+}
+
+bool CtrlMap(Ctrl *ctrl, u16f code, u16f bind, u8f type)
+{
+    assert(ctrl->codes.filled < ctrl->codes.capacity);
+    assert(ctrl->binds.filled < ctrl->binds.capacity);
+
+    struct bkt *code_bkt;
+    find_or_set(&ctrl->codes, &code_bkt, code, type);
+    assert(code_bkt != nullptr);
+
+    struct bkt *bind_bkt;
+    bool bind_existed = find_or_set(&ctrl->binds, &bind_bkt, bind, type);
+    assert(bind_bkt != nullptr);
+    
+    if(bind_existed and bind_bkt->axis == code_bkt->axis)
+        return false;
+    
+    bind_bkt->axis = code_bkt->axis;
+    return true;
 }
 
 struct Axis *CtrlGet(Ctrl *ctrl, u16f code, u8f type)
 {
-=    struct ctrl_bkt *code_bkt = find_code(ctrl, code, type);
+    struct bkt *code_bkt = find(&ctrl->codes, code, type);
     if (code_bkt == nullptr)
         return nullptr;
 
-    return &code_bkt->axis;
+    return code_bkt->axis;
 }
 
-bool CtrlUpdateKey(Ctrl *ctrl, struct InputRecord *record)
+void update_key(struct Axis *axis, struct InputRecord *record)
 {
-    struct Axis *axis = find_bind_axis(ctrl, record->id, KEY);
-    if (axis == nullptr)
-        return false;
-
-    if (record->data.key.is_down) {
+    if (record->data.key.is_down)
         axis->last_pressed = record->timestamp;
-    } else {
+    else
         axis->last_released = record->timestamp;
-    }
-    axis->data.axis.value = record->data.key.is_down;
 
-    return true;
+    axis->data.key.is_down = record->data.key.is_down;
 }
 
-bool CtrlUpdateAxis(Ctrl *ctrl, struct InputRecord *record)
+void update_axis(struct Axis *axis, struct InputRecord *record)
 {
-    struct Axis *axis = find_bind_axis(ctrl, record->id, AXIS);
-    if (axis == nullptr)
-        return false;
-
     axis->data.axis.value = record->data.axis.value;
     axis->last_pressed = record->timestamp;
-
-    return true;
 }
 
-bool CtrlUpdateJoystick(Ctrl *ctrl, struct InputRecord *record)
+void update_joystick(struct Axis *axis, struct InputRecord *record)
 {
-    struct Axis *axis = find_bind_axis(ctrl, record->id, JOYSTICK);
-    if (axis == nullptr)
-        return false;
-
     axis->data.joystick.x = record->data.joystick.x;
     axis->data.joystick.y = record->data.joystick.y;
     axis->last_pressed = record->timestamp;
-
-    return true;
 }
 
-bool CtrlUpdateWindow(Ctrl *ctrl, struct InputRecord *record)
+bool CtrlPoll(Ctrl *ctrl, struct InputBuffer *buf)
 {
-    struct Axis *axis = find_bind_axis(ctrl, record->id, WINDOW);
-    if (axis == nullptr)
-        return false;
+    pthread_mutex_lock(&buf->mutex);
+    pthread_mutex_lock(&ctrl->mutex);
 
-    axis->data.joystick.x = record->data.joystick.x;
-    axis->data.joystick.y = record->data.joystick.y;
-    axis->last_pressed = record->timestamp;
+    for (size_t i = 0; i < buf->count; i++) {
+        struct InputRecord *rec = &buf->records[i];
 
+        struct Axis *axis = find_axis(&ctrl->binds, rec->id, rec->type);
+        if (axis == nullptr)
+            continue;
+
+        switch (rec->type) {
+        case KEY:
+            update_key(axis, rec);
+            break;
+        case AXIS:
+            update_axis(axis, rec);
+            break;
+        case JOYSTICK:
+        case WINDOW:
+            update_joystick(axis, rec);
+            break;
+        default:
+            return false;
+        }
+    }
+
+    buf->count = 0;
+    pthread_mutex_unlock(&buf->mutex);
+    pthread_mutex_unlock(&ctrl->mutex);
     return true;
 }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
+#include <time.h>
 
 #include "fumotris.h"
 #include "gametime.h"
@@ -103,14 +104,20 @@ bool dispatch_record(struct InputRecord *record, INPUT_RECORD win_record)
 
 bool WinBlockInput(struct InputBuffer *buf)
 {
+    printf("\twin blocked: %u\n", buf);
     size_t win_size = IO_BUF_SIZE - buf->count;
+    printf("\twhar\n");
     INPUT_RECORD win_buf[win_size];
     DWORD count;
 
+    printf("\treading in..\n");
     if (!ReadConsoleInput(windows.input_handle, win_buf, win_size, &count))
         return false;
+    printf("\read done\n");
     
-    double now = GetTime();
+    struct timespec now;
+    timespec_get(&now, TIME_UTC);
+
     pthread_mutex_lock(&buf->mutex);
 
     for (size_t i = 0; i < count; i++) {
@@ -133,11 +140,12 @@ bool WinWait(double seconds)
 {
     LARGE_INTEGER duration;
     duration.QuadPart = (u64)(-10000000.0 * seconds);
-
     if (!SetWaitableTimer(windows.timer, &duration, 0, NULL, NULL, FALSE))
         return false;
 
+    printf("about to wait..\n");
     DWORD result = WaitForSingleObject(windows.timer, INFINITE);
+    printf("waitforsingle\n");
     if (result != WAIT_OBJECT_0)
         return false;
     

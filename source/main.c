@@ -51,7 +51,7 @@ u8 I[16] = {
     0, 0, 0, 0
 };
 
-void Loop(Ctrl *ctrl)
+void Loop(Ctrl *ctrl, struct InputBuffer *in_buf)
 {
     struct TermBuf term = NewTermBuf(20, 20);
     struct CharBlk4 term_blks[term.area];
@@ -73,15 +73,16 @@ void Loop(Ctrl *ctrl)
     falling.blks = falling_blks;
 
     for (int i = 0; i < 7779997; i++) {
-        
+        CtrlPoll(ctrl, in_buf);
+        printf("polled\n");
 
         TetrMapToTermBuf(&board, &term);
         TetrMapToTermBuf(&falling, &term);
 
-        size_t size = TermBufToChars(&term, out, out_max);
-        puts(out);
+        TermBufToChars(&term, out, out_max);
+        //puts(out);
 
-        WindowsWait(0.1);
+        printf("%u\n", WindowsWait(0.01));
     }
 }
 
@@ -89,8 +90,8 @@ int main()
 {
     WindowsInit();
 
-    struct ctrl_bkt bkts[13];
-    Ctrl ctrl = NewCtrl(bkts, 13);
+    Ctrl ctrl;
+    NEW_CTRL(ctrl, 13, 13);
 
     for (size_t i = 0; i < 9; i++) {
         CtrlMap(&ctrl, key_binds[i], key_codes[i], KEY);
@@ -103,8 +104,15 @@ int main()
 
     printf("set controls\n");
 
-    StartInput(&ctrl);
-    Loop(&ctrl);
+    struct InputBuffer in_buf = {
+        .count = 0,
+        .mutex = PTHREAD_MUTEX_INITIALIZER
+    };
+
+    StartInput(&ctrl, &in_buf);
+    Loop(&ctrl, &in_buf);
+
+    JoinInput(&ctrl);
 
     return 0;
 }
