@@ -22,7 +22,7 @@ struct TermBuf {
     struct CharBlk4 *blks;
 };
 
-struct TermBuf NewTermBuf(size_t wid, size_t hgt);
+struct TermBuf NewTermBuf(struct CharBlk4 *blks, size_t wid, size_t hgt);
 
 size_t TermMaxChars(struct TermBuf *term);
 

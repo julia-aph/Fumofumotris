@@ -21,10 +21,13 @@ struct TermBuf {
     struct CharBlk4 *blks;
 };
 
-struct TermBuf NewTermBuf(size_t wid, size_t hgt)
+struct TermBuf NewTermBuf(struct CharBlk4 *blks, size_t wid, size_t hgt)
 {
+    size_t area = wid * hgt;
+    memset(blks, 0, sizeof(struct CharBlk4) * area);
+
     return (struct TermBuf) {
-        wid, hgt, wid * hgt
+        wid, hgt, area, blks
     };
 }
 
@@ -105,24 +108,3 @@ size_t TermBufToChars(struct TermBuf *term, char *buf, size_t max_chars)
     buf[filled] = 0;
     return filled;
 }
-
-/*int main()
-{
-    struct TermBuf term;
-    term.wid = 20;
-    term.hgt = 10;
-    term.area = 20 * 10;
-    struct CharBlk4 blks[term.area];
-    memset(&blks, 0, sizeof(struct CharBlk4) * term.area);
-    term.blks = blks;
-
-    size_t out_max = TermMaxChars(&term);
-    char out[out_max];
-    memset(out, 0, out_max);
-
-    TermBufToChars(&term, out, out_max);
-
-    puts(out);
-
-    return 0;
-}*/

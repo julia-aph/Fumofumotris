@@ -21,11 +21,15 @@ struct TetrMap {
     u8 *blks;
 };
 
-struct TetrMap NewTetrMap(size_t wid, size_t hgt)
+struct TetrMap NewTetrMap(u8 *blks, size_t wid, size_t hgt)
 {
+    size_t area = wid * hgt;
+    memset(blks, 0, area);
+
     return (struct TetrMap) {
-        wid, hgt, wid * hgt,
+        wid, hgt, area,
         0, 0, 0,
+        blks
     };
 }
 

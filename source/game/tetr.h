@@ -21,7 +21,7 @@ struct TetrMap {
     u8 *blks;
 };
 
-struct TetrMap NewTetrMap(size_t wid, size_t hgt);
+struct TetrMap NewTetrMap(u8 *blks, size_t wid, size_t hgt);
 
 void TetrMapToTermBuf(struct TetrMap *map, struct TermBuf *term);
 

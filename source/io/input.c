@@ -12,17 +12,9 @@
 #include "win.h"
 #endif
 
-struct input_args {
-    Ctrl *ctrl;
-    struct RecordBuffer *buf;
-};
-
 void *block_input(void *args_ptr)
 {
-    struct input_args *args = args_ptr;
-    Ctrl *ctrl = args->ctrl;
-    struct RecordBuffer *buf = args->buf;
-    free(args_ptr);
+    struct RecordBuffer *buf = args_ptr;
 
     while (true) {
         bool success;
@@ -42,11 +34,7 @@ void *block_input(void *args_ptr)
 
 void StartInput(Ctrl *ctrl, struct RecordBuffer *buf)
 {
-    struct input_args *args = malloc(sizeof(struct input_args));
-    args->ctrl = ctrl;
-    args->buf = buf;
-
-    pthread_create(&ctrl->thread, nullptr, block_input, args);
+    pthread_create(&ctrl->thread, nullptr, block_input, buf);
 }
 
 void JoinInput(Ctrl *ctrl)

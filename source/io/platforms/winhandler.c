@@ -10,26 +10,37 @@
 #include "fumotris.h"
 #include "gametime.h"
 #include "input.h"
+#include "instance.h"
 
 struct Windows {
     HANDLE input_handle;
-    HANDLE timer;
+    HANDLE draw_handles[2];
 };
 static struct Windows windows;
 
-bool WinInitInputHandle()
+bool WinInitHandles()
 {
     windows.input_handle = GetStdHandle(STD_INPUT_HANDLE);
     if (windows.input_handle == INVALID_HANDLE_VALUE)
         return false;
-    return true;
-}
 
-bool WinInitTimer()
-{
-    windows.timer = CreateWaitableTimer(NULL, TRUE, NULL);
-    if (!windows.timer)
+    windows.draw_handles[0] = CreateWaitableTimer(
+        NULL,   // Timer attributes
+        TRUE,   // Manual reset
+        NULL    // Name
+    );
+    if (!windows.draw_handles[0])
         return false;
+
+    windows.draw_handles[1] = CreateEvent(
+        NULL,   // Event attributes
+        FALSE,  // Manual reset
+        FALSE,  // Initial state
+        NULL    // Name
+    );
+    if (!windows.draw_handles[1])
+        return false;
+
     return true;
 }
 
@@ -41,6 +52,20 @@ bool WinInitConsole()
         | ENABLE_WINDOW_INPUT 
         | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     return SetConsoleMode(windows.input_handle, mode);
+}
+
+bool WinGetRefreshRate(struct Window *window)
+{
+    LPDEVMODE mode;
+    if(!EnumDisplaySettingsA(
+        NULL,                   // Device name (null for current)
+        ENUM_CURRENT_SETTINGS,  // Mode
+        &mode                   // Out
+    ))
+        return false;
+
+    window->fps = mode->dmDisplayFrequency;
+    return true;
 }
 
 void set_key_record(struct CtrlRecord *record, KEY_EVENT_RECORD win_key)
@@ -78,24 +103,17 @@ bool set_mouse_record(struct CtrlRecord *record, MOUSE_EVENT_RECORD win_mouse)
     return true;
 }
 
-void set_window_record(struct CtrlRecord *record, WINDOW_BUFFER_SIZE_RECORD win_resize)
-{
-    record->type = WINDOW;
-    record->data.joystick.x = win_resize.dwSize.X;
-    record->data.joystick.y = win_resize.dwSize.Y;
-}
-
 bool dispatch_record(struct CtrlRecord *record, INPUT_RECORD win_record)
 {
     switch (win_record.EventType) {
     case KEY_EVENT:
         set_key_record(record, win_record.Event.KeyEvent);
-        return true;
+        break;
     case MOUSE_EVENT:
         return set_mouse_record(record, win_record.Event.MouseEvent);
     case WINDOW_BUFFER_SIZE_EVENT:
         set_window_record(record, win_record.Event.WindowBufferSizeEvent);
-        return true;
+        break;
     default:
         record->type = ESCAPE;
     }
@@ -108,7 +126,12 @@ bool WinBlockInput(struct RecordBuffer *buf)
     INPUT_RECORD win_buf[win_size];
     DWORD count;
 
-    if (!ReadConsoleInput(windows.input_handle, win_buf, win_size, &count))
+    if (!ReadConsoleInput(
+        windows.input_handle,   // Input handle
+        win_buf,                // Record buffer
+        win_size,               // Record buffer length
+        &count                  // Out number of records
+    ))
         return false;
     
     struct timespec now;
@@ -132,14 +155,28 @@ bool WinBlockInput(struct RecordBuffer *buf)
     return true;
 }
 
-bool WinWait(double seconds)
+bool WinWait(struct timespec duration)
 {
     LARGE_INTEGER duration;
     duration.QuadPart = (u64)(-10000000.0 * seconds);
-    if (!SetWaitableTimer(windows.timer, &duration, 0, NULL, NULL, FALSE))
+    
+
+    if (!SetWaitableTimer(
+        windows.draw_handles[0],    // Timer
+        &duration,                  // Duration
+        0,                          // Period
+        NULL,                       // Completion coroutine
+        NULL,                       // Completion coroutine arg
+        FALSE                       // Resume
+    ))
         return false;
 
-    DWORD result = WaitForSingleObject(windows.timer, INFINITE);
+    DWORD result = WaitForMultipleObjects(
+        2,                          // Handle count
+        windows.draw_handles,       // Handles
+        FALSE,                      // Wait for all
+        INFINITE                    // Timeout
+    );
     if (result != WAIT_OBJECT_0)
         return false;
     

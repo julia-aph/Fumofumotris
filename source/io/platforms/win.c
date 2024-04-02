@@ -5,9 +5,10 @@
 #include <stdlib.h>
 
 #include "input.h"
+#include "instance.h"
 #include "winhandler.h"
 
-bool WindowsInit()
+bool WindowsInit(struct Window *window)
 {
     if (!WinInitInputHandle())
         return false;
@@ -15,8 +16,10 @@ bool WindowsInit()
     if (!WinInitTimer())
         return false;
 
-    if(!WinInitConsole())
+    if (!WinInitConsole())
         return false;
+
+    
 
     return true;
 }

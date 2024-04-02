@@ -14,4 +14,3 @@ typedef uint_fast32_t   u32f;
 
 typedef uint64_t        u64;
 typedef uint_fast64_t   u64f;
-

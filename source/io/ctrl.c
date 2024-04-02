@@ -16,7 +16,6 @@ enum CtrlType {
     KEY,
     AXIS,
     JOYSTICK,
-    WINDOW,
     ESCAPE
 };
 
@@ -122,26 +121,19 @@ struct Ctrl {
 };
 typedef struct Ctrl Ctrl;
 
-Ctrl NewCtrl(struct bkt *codes, struct Axis *axes, size_t c, struct bkt *binds, size_t b)
+Ctrl NewCtrl(struct dict *codes, struct dict *binds, struct Axis *axes)
 {
-    memset(codes, 0, sizeof(struct bkt) * c);
-    memset(axes, 0, sizeof(struct Axis) * c);
-    memset(binds, 0, sizeof(struct bkt) * b);
+    memset(codes->bkts, 0, sizeof(struct bkt) * codes->capacity);
+    memset(binds->bkts, 0, sizeof(struct bkt) * binds->capacity);
+    memset(axes, 0, sizeof(struct Axis) * codes->capacity);
 
-    for (size_t i = 0; i < c; i++) {
-        codes[i].axis = &axes[i];
+    for (size_t i = 0; i < codes->capacity; i++) {
+        codes->bkts[i].axis = &axes[i];
     }
 
     Ctrl ctrl;
-
-    ctrl.codes.capacity = c;
-    ctrl.codes.filled = 0;
-    ctrl.codes.bkts = codes;
-
-    ctrl.binds.capacity = b;
-    ctrl.binds.filled = 0;
-    ctrl.binds.bkts = binds;
-
+    ctrl.codes = *codes;
+    ctrl.binds = *binds;
     ctrl.mutex = PTHREAD_MUTEX_INITIALIZER;
 
     return ctrl;
@@ -295,7 +287,6 @@ bool CtrlPoll(Ctrl *ctrl, struct RecordBuffer *buf)
             update_axis(axis, rec);
             break;
         case JOYSTICK:
-        case WINDOW:
             update_joystick(axis, rec);
             break;
         default:

@@ -16,7 +16,6 @@ enum CtrlType {
     KEY,
     AXIS,
     JOYSTICK,
-    WINDOW,
     ESCAPE
 };
 
@@ -107,17 +106,7 @@ struct Ctrl {
 };
 typedef struct Ctrl Ctrl;
 
-#define NEW_CTRL(CTRL, CODES, BINDS)    \
-    struct bkt NEW_CTRL_CODES[CODES];   \
-    struct bkt NEW_CTRL_BINDS[BINDS];   \
-    struct Axis NEW_CTRL_AXES[CODES];   \
-    CTRL = NewCtrl(                     \
-        NEW_CTRL_CODES,                 \
-        NEW_CTRL_AXES, CODES,           \
-        NEW_CTRL_BINDS, BINDS           \
-    );                                  \
-
-Ctrl NewCtrl(struct bkt *codes, struct Axis *axes, size_t c, struct bkt *binds, size_t b);
+Ctrl NewCtrl(struct dict *codes, struct dict *binds, struct Axis *axes);
 
 bool CtrlMap(Ctrl *ctrl, u16f code, u16f bind, u8f type);
 
