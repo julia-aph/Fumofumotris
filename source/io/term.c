@@ -71,8 +71,7 @@ size_t TermBufToChars(struct TermBuf *term, char *buf, size_t max_chars)
     u8f last_bg = 0;
     u8f last_fg = 0;
 
-    //size_t filled = snprintf(buf, max_chars, "\x1b[H\x1b[0m");
-    size_t filled = snprintf(buf, max_chars, "\x1b[0m");
+    size_t filled = snprintf(buf, max_chars, "\x1b[H\x1b[0m");
 
     for(size_t y = 0; y < term->hgt; y++) {
     for(size_t x = 0; x < term->wid; x++) {

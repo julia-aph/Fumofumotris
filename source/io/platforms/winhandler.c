@@ -43,7 +43,7 @@ bool WinInitConsole()
     return SetConsoleMode(windows.input_handle, mode);
 }
 
-void set_key_record(struct InputRecord *record, KEY_EVENT_RECORD win_key)
+void set_key_record(struct CtrlRecord *record, KEY_EVENT_RECORD win_key)
 {
     record->type = KEY;
     record->id = win_key.wVirtualKeyCode;
@@ -53,7 +53,7 @@ void set_key_record(struct InputRecord *record, KEY_EVENT_RECORD win_key)
         record->type = ESCAPE;
 }
 
-bool set_mouse_record(struct InputRecord *record, MOUSE_EVENT_RECORD win_mouse)
+bool set_mouse_record(struct CtrlRecord *record, MOUSE_EVENT_RECORD win_mouse)
 {
     switch (win_mouse.dwEventFlags) {
     case MOUSE_WHEELED:
@@ -78,14 +78,14 @@ bool set_mouse_record(struct InputRecord *record, MOUSE_EVENT_RECORD win_mouse)
     return true;
 }
 
-void set_window_record(struct InputRecord *record, WINDOW_BUFFER_SIZE_RECORD win_resize)
+void set_window_record(struct CtrlRecord *record, WINDOW_BUFFER_SIZE_RECORD win_resize)
 {
     record->type = WINDOW;
     record->data.joystick.x = win_resize.dwSize.X;
     record->data.joystick.y = win_resize.dwSize.Y;
 }
 
-bool dispatch_record(struct InputRecord *record, INPUT_RECORD win_record)
+bool dispatch_record(struct CtrlRecord *record, INPUT_RECORD win_record)
 {
     switch (win_record.EventType) {
     case KEY_EVENT:
@@ -102,18 +102,14 @@ bool dispatch_record(struct InputRecord *record, INPUT_RECORD win_record)
     return true;
 }
 
-bool WinBlockInput(struct InputBuffer *buf)
+bool WinBlockInput(struct RecordBuffer *buf)
 {
-    printf("\twin blocked: %u\n", buf);
     size_t win_size = IO_BUF_SIZE - buf->count;
-    printf("\twhar\n");
     INPUT_RECORD win_buf[win_size];
     DWORD count;
 
-    printf("\treading in..\n");
     if (!ReadConsoleInput(windows.input_handle, win_buf, win_size, &count))
         return false;
-    printf("\read done\n");
     
     struct timespec now;
     timespec_get(&now, TIME_UTC);
@@ -121,7 +117,7 @@ bool WinBlockInput(struct InputBuffer *buf)
     pthread_mutex_lock(&buf->mutex);
 
     for (size_t i = 0; i < count; i++) {
-        struct InputRecord record;
+        struct CtrlRecord record;
         record.timestamp = now;
 
         bool include = dispatch_record(&record, win_buf[i]);
@@ -143,9 +139,7 @@ bool WinWait(double seconds)
     if (!SetWaitableTimer(windows.timer, &duration, 0, NULL, NULL, FALSE))
         return false;
 
-    printf("about to wait..\n");
     DWORD result = WaitForSingleObject(windows.timer, INFINITE);
-    printf("waitforsingle\n");
     if (result != WAIT_OBJECT_0)
         return false;
     

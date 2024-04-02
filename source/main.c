@@ -15,7 +15,9 @@
 #include "win.h"
 #endif
 
-const enum KeyCode key_codes[] = {
+const size_t code_count = 12;
+
+const enum CtrlCode codes[12] = {
     LEFT,
     RIGHT,
     SOFT_DROP,
@@ -24,9 +26,15 @@ const enum KeyCode key_codes[] = {
     ROTATE_CW,
     ROTATE_180,
     SWAP,
-    ESC
+    ESC,
+
+    VSCROLL,
+    HSCROLL,
+
+    MOUSE
 };
-const u16f key_binds[] = {
+
+const u16f binds[12] = {
     0x25,
     0x27,
     0x28,
@@ -35,14 +43,13 @@ const u16f key_binds[] = {
     'X',
     'A',
     'C',
-    0x1B
-};
+    0x1B,
 
-const enum AxisCode axis_codes[] = {
-    VSCROLL,
-    HSCROLL
+    0,
+    1,
+
+    0
 };
-const u16f axis_binds[] = { 0, 1 };
 
 u8 I[16] = {
     0, 0, 0, 0,
@@ -51,7 +58,7 @@ u8 I[16] = {
     0, 0, 0, 0
 };
 
-void Loop(Ctrl *ctrl, struct InputBuffer *in_buf)
+void Loop(Ctrl *ctrl, struct RecordBuffer *in_buf)
 {
     struct TermBuf term = NewTermBuf(20, 20);
     struct CharBlk4 term_blks[term.area];
@@ -74,15 +81,14 @@ void Loop(Ctrl *ctrl, struct InputBuffer *in_buf)
 
     for (int i = 0; i < 7779997; i++) {
         CtrlPoll(ctrl, in_buf);
-        printf("polled\n");
 
         TetrMapToTermBuf(&board, &term);
         TetrMapToTermBuf(&falling, &term);
 
         TermBufToChars(&term, out, out_max);
-        //puts(out);
+        puts(out);
 
-        printf("%u\n", WindowsWait(0.01));
+        WindowsWait(0.5);
     }
 }
 
@@ -93,7 +99,7 @@ int main()
     Ctrl ctrl;
     NEW_CTRL(ctrl, 13, 13);
 
-    for (size_t i = 0; i < 9; i++) {
+    for (size_t i = 0; i < code_count; i++) {
         CtrlMap(&ctrl, key_binds[i], key_codes[i], KEY);
     }
     for (size_t i = 0; i < 2; i++) {
@@ -104,7 +110,7 @@ int main()
 
     printf("set controls\n");
 
-    struct InputBuffer in_buf = {
+    struct RecordBuffer in_buf = {
         .count = 0,
         .mutex = PTHREAD_MUTEX_INITIALIZER
     };

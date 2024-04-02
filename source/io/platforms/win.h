@@ -10,6 +10,6 @@
 
 bool WindowsInit();
 
-bool WindowsBlockInput(struct InputBuffer *buf);
+bool WindowsBlockInput(struct RecordBuffer *buf);
 
 bool WindowsWait(double seconds);

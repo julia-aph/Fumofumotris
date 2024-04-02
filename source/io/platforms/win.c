@@ -21,7 +21,7 @@ bool WindowsInit()
     return true;
 }
 
-bool WindowsBlockInput(struct InputBuffer *buf)
+bool WindowsBlockInput(struct RecordBuffer *buf)
 {
     return WinBlockInput(buf);
 }

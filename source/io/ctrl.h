@@ -12,7 +12,7 @@
 
 #define IO_BUF_SIZE 16
 
-enum InputType {
+enum CtrlType {
     KEY,
     AXIS,
     JOYSTICK,
@@ -20,7 +20,7 @@ enum InputType {
     ESCAPE
 };
 
-struct InputRecord {
+struct CtrlRecord {
     u16 id;
     u8 type;
 
@@ -40,13 +40,13 @@ struct InputRecord {
     struct timespec timestamp;
 };
 
-struct InputBuffer {
-    struct InputRecord records[IO_BUF_SIZE];
+struct RecordBuffer {
+    struct CtrlRecord records[IO_BUF_SIZE];
     size_t count;
     pthread_mutex_t mutex;
 };
 
-struct InputBuffer NewInputBuffer();
+struct RecordBuffer NewInputBuffer();
 
 struct Axis {
     union {
@@ -68,7 +68,7 @@ struct Axis {
     struct timespec last_released;
 };
 
-enum KeyCode {
+enum CtrlCode {
     LEFT,
     RIGHT,
     SOFT_DROP,
@@ -77,15 +77,9 @@ enum KeyCode {
     ROTATE_CW,
     ROTATE_180,
     SWAP,
-    ESC
-};
-
-enum AxisCode {
+    ESC,
     VSCROLL,
-    HSCROLL
-};
-
-enum JoystickCode {
+    HSCROLL,
     MOUSE
 };
 
@@ -129,4 +123,4 @@ bool CtrlMap(Ctrl *ctrl, u16f code, u16f bind, u8f type);
 
 struct Axis *CtrlGet(Ctrl *ctrl, u16f code, u8f type);
 
-bool CtrlPoll(Ctrl *ctrl, struct InputBuffer *buf);
+bool CtrlPoll(Ctrl *ctrl, struct RecordBuffer *buf);

@@ -12,7 +12,7 @@
 
 #define IO_BUF_SIZE 16
 
-enum InputType {
+enum CtrlType {
     KEY,
     AXIS,
     JOYSTICK,
@@ -20,7 +20,7 @@ enum InputType {
     ESCAPE
 };
 
-struct InputRecord {
+struct CtrlRecord {
     u16 id;
     u8 type;
 
@@ -40,15 +40,15 @@ struct InputRecord {
     struct timespec timestamp;
 };
 
-struct InputBuffer {
-    struct InputRecord records[IO_BUF_SIZE];
+struct RecordBuffer {
+    struct CtrlRecord records[IO_BUF_SIZE];
     size_t count;
     pthread_mutex_t mutex;
 };
 
-struct InputBuffer NewInputBuffer()
+struct RecordBuffer NewInputBuffer()
 {
-    struct InputBuffer buf;
+    struct RecordBuffer buf;
     buf.count = 0;
     buf.mutex = PTHREAD_MUTEX_INITIALIZER;
     return buf;
@@ -72,27 +72,6 @@ struct Axis {
 
     struct timespec last_pressed;
     struct timespec last_released;
-};
-
-enum KeyCode {
-    LEFT,
-    RIGHT,
-    SOFT_DROP,
-    HARD_DROP,
-    ROTATE_CCW,
-    ROTATE_CW,
-    ROTATE_180,
-    SWAP,
-    ESC
-};
-
-enum AxisCode {
-    VSCROLL,
-    HSCROLL
-};
-
-enum JoystickCode {
-    MOUSE
 };
 
 typedef u32 hashtype;
@@ -273,7 +252,7 @@ struct Axis *CtrlGet(Ctrl *ctrl, u16f code, u8f type)
     return code_bkt->axis;
 }
 
-void update_key(struct Axis *axis, struct InputRecord *record)
+void update_key(struct Axis *axis, struct CtrlRecord *record)
 {
     if (record->data.key.is_down)
         axis->last_pressed = record->timestamp;
@@ -283,26 +262,26 @@ void update_key(struct Axis *axis, struct InputRecord *record)
     axis->data.key.is_down = record->data.key.is_down;
 }
 
-void update_axis(struct Axis *axis, struct InputRecord *record)
+void update_axis(struct Axis *axis, struct CtrlRecord *record)
 {
     axis->data.axis.value = record->data.axis.value;
     axis->last_pressed = record->timestamp;
 }
 
-void update_joystick(struct Axis *axis, struct InputRecord *record)
+void update_joystick(struct Axis *axis, struct CtrlRecord *record)
 {
     axis->data.joystick.x = record->data.joystick.x;
     axis->data.joystick.y = record->data.joystick.y;
     axis->last_pressed = record->timestamp;
 }
 
-bool CtrlPoll(Ctrl *ctrl, struct InputBuffer *buf)
+bool CtrlPoll(Ctrl *ctrl, struct RecordBuffer *buf)
 {
     pthread_mutex_lock(&buf->mutex);
     pthread_mutex_lock(&ctrl->mutex);
 
     for (size_t i = 0; i < buf->count; i++) {
-        struct InputRecord *rec = &buf->records[i];
+        struct CtrlRecord *rec = &buf->records[i];
 
         struct Axis *axis = find_axis(&ctrl->binds, rec->id, rec->type);
         if (axis == nullptr)
