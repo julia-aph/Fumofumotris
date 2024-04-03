@@ -88,64 +88,83 @@ hashtype Hash(void *item, size_t size)
     return h;
 }
 
-struct ident {
-    u16 id;
-    u8 type;
-};
-
 hashtype hash_ident(u16f value, u8f type)
 {
-    struct ident id = { value, type };
-    return Hash(&id, sizeof(struct ident));
+    struct id {
+        u16 id;
+        u8 type;
+    };
+
+    struct id id = { value, type };
+    return Hash(&id, sizeof(struct id));
 }
 
-struct bkt {
+struct ctrl_bkt {
     hashtype hash;
     u16 value;
     u8 type;
     struct Axis *axis;
 };
 
-struct dict {
+struct ctrl_dict {
     size_t capacity;
     size_t filled;
-    struct bkt *bkts;
+    struct ctrl_bkt *bkts;
 };
 
 struct Ctrl {
-    struct dict codes;
-    struct dict binds;
+    struct ctrl_dict codes;
+    struct ctrl_dict binds;
 
     pthread_t thread;
     pthread_mutex_t mutex;
 };
-typedef struct Ctrl Ctrl;
 
-Ctrl NewCtrl(struct dict *codes, struct dict *binds, struct Axis *axes)
+struct Ctrl NewCtrl()
 {
-    memset(codes->bkts, 0, sizeof(struct bkt) * codes->capacity);
-    memset(binds->bkts, 0, sizeof(struct bkt) * binds->capacity);
-    memset(axes, 0, sizeof(struct Axis) * codes->capacity);
+    struct Ctrl ctrl = (struct Ctrl) {
+        .codes = (struct ctrl_dict) {
+            .capacity = 0,
+            .filled = 0,
+            .bkts = nullptr
+        },
+        .binds = (struct ctrl_dict) {
+            .capacity = 0,
+            .filled = 0,
+            .bkts = nullptr
+        },
 
-    for (size_t i = 0; i < codes->capacity; i++) {
-        codes->bkts[i].axis = &axes[i];
-    }
-
-    Ctrl ctrl;
-    ctrl.codes = *codes;
-    ctrl.binds = *binds;
-    ctrl.mutex = PTHREAD_MUTEX_INITIALIZER;
-
+        .mutex = PTHREAD_MUTEX_INITIALIZER
+    };
     return ctrl;
 }
 
-struct bkt *get_bkt(struct dict *dict, size_t i)
+void CtrlSet(
+    struct Ctrl *ctrl,
+    struct ctrl_bkt *code_bkts,
+    struct ctrl_bkt *bind_bkts,
+    struct Axis *axes,
+    size_t c_len,
+    size_t b_len
+) {
+    ctrl->codes.capacity = c_len;
+    ctrl->codes.bkts = code_bkts;
+    memset(code_bkts, 0, sizeof(struct ctrl_bkt) * c_len);
+
+    ctrl->binds.capacity = b_len;
+    ctrl->binds.bkts = bind_bkts;
+    memset(bind_bkts, 0, sizeof(struct ctrl_bkt) * b_len);
+    
+    
+}
+
+struct ctrl_bkt *get_bkt(struct ctrl_dict *dict, size_t i)
 {
     assert(i < dict->capacity);
     return &dict->bkts[i];
 }
 
-void set_bkt(struct bkt *bkt, hashtype hash, u16f value, u8f type)
+void set_bkt(struct ctrl_bkt *bkt, hashtype hash, u16f value, u8f type)
 {
     bkt->hash = hash;
     bkt->value = value;
@@ -157,14 +176,14 @@ size_t wrap(size_t x, size_t wrap)
     return x % (SIZE_MAX - wrap + 1);
 }
 
-bool find_or_set(struct dict *dict, struct bkt **out, u16f value, u8f type)
+bool find_or_set(struct ctrl_dict *dict, struct ctrl_bkt **out, u16f value, u8f type)
 {
     hashtype hash = hash_ident(value, type);
     const size_t index = hash % dict->capacity;
 
     size_t i = index;
     while (i != wrap(index - 1, dict->capacity)) {
-        struct bkt *bkt = get_bkt(dict, i);
+        struct ctrl_bkt *bkt = get_bkt(dict, i);
 
         if (bkt->hash == 0) {
             set_bkt(bkt, hash, value, type);
@@ -185,14 +204,14 @@ bool find_or_set(struct dict *dict, struct bkt **out, u16f value, u8f type)
     return false;
 }
 
-struct bkt *find(struct dict *dict, u16f value, u8f type)
+struct ctrl_bkt *find(struct ctrl_dict *dict, u16f value, u8f type)
 {
     hashtype hash = hash_ident(value, type);
     const size_t index = hash % dict->capacity;
 
     size_t i = index;
     while (i != wrap(index - 1, dict->capacity)) {
-        struct bkt *bkt = get_bkt(dict, i);
+        struct ctrl_bkt *bkt = get_bkt(dict, i);
         if (bkt->hash == 0)
             goto next;
 
@@ -206,25 +225,25 @@ next:
     return nullptr;
 }
 
-struct Axis *find_axis(struct dict *dict, u16f value, u8f type)
+struct Axis *find_axis(struct ctrl_dict *dict, u16f value, u8f type)
 {
-    struct bkt *bkt = find(dict, value, type);
+    struct ctrl_bkt *bkt = find(dict, value, type);
     if (bkt == nullptr)
         return nullptr;
 
     return bkt->axis;
 }
 
-bool CtrlMap(Ctrl *ctrl, u16f code, u16f bind, u8f type)
+bool CtrlMap(struct Ctrl *ctrl, u16f code, u16f bind, u8f type)
 {
     assert(ctrl->codes.filled < ctrl->codes.capacity);
     assert(ctrl->binds.filled < ctrl->binds.capacity);
 
-    struct bkt *code_bkt;
+    struct ctrl_bkt *code_bkt;
     find_or_set(&ctrl->codes, &code_bkt, code, type);
     assert(code_bkt != nullptr);
 
-    struct bkt *bind_bkt;
+    struct ctrl_bkt *bind_bkt;
     bool bind_existed = find_or_set(&ctrl->binds, &bind_bkt, bind, type);
     assert(bind_bkt != nullptr);
     
@@ -235,9 +254,9 @@ bool CtrlMap(Ctrl *ctrl, u16f code, u16f bind, u8f type)
     return true;
 }
 
-struct Axis *CtrlGet(Ctrl *ctrl, u16f code, u8f type)
+struct Axis *CtrlGet(struct Ctrl *ctrl, u16f code, u8f type)
 {
-    struct bkt *code_bkt = find(&ctrl->codes, code, type);
+    struct ctrl_bkt *code_bkt = find(&ctrl->codes, code, type);
     if (code_bkt == nullptr)
         return nullptr;
 
@@ -267,13 +286,10 @@ void update_joystick(struct Axis *axis, struct CtrlRecord *record)
     axis->last_pressed = record->timestamp;
 }
 
-bool CtrlPoll(Ctrl *ctrl, struct RecordBuffer *buf)
+bool CtrlPoll(struct Ctrl *ctrl, struct RecordBuffer *rec_buf)
 {
-    pthread_mutex_lock(&buf->mutex);
-    pthread_mutex_lock(&ctrl->mutex);
-
-    for (size_t i = 0; i < buf->count; i++) {
-        struct CtrlRecord *rec = &buf->records[i];
+    for (size_t i = 0; i < rec_buf->count; i++) {
+        struct CtrlRecord *rec = &rec_buf->records[i];
 
         struct Axis *axis = find_axis(&ctrl->binds, rec->id, rec->type);
         if (axis == nullptr)
@@ -294,8 +310,6 @@ bool CtrlPoll(Ctrl *ctrl, struct RecordBuffer *buf)
         }
     }
 
-    buf->count = 0;
-    pthread_mutex_unlock(&buf->mutex);
-    pthread_mutex_unlock(&ctrl->mutex);
+    rec_buf->count = 0;
     return true;
 }

@@ -84,32 +84,31 @@ enum CtrlCode {
 
 typedef u32 hashtype;
 
-struct bkt {
+struct ctrl_bkt {
     hashtype hash;
     u16 value;
     u8 type;
     struct Axis *axis;
 };
 
-struct dict {
+struct ctrl_dict {
     size_t capacity;
     size_t filled;
-    struct bkt *bkts;
+    struct ctrl_bkt *bkts;
 };
 
 struct Ctrl {
-    struct dict codes;
-    struct dict binds;
+    struct ctrl_dict codes;
+    struct ctrl_dict binds;
 
     pthread_t thread;
     pthread_mutex_t mutex;
 };
-typedef struct Ctrl Ctrl;
 
-Ctrl NewCtrl(struct dict *codes, struct dict *binds, struct Axis *axes);
+struct Ctrl NewCtrl(struct ctrl_dict *codes, struct ctrl_dict *binds, struct Axis *axes);
 
-bool CtrlMap(Ctrl *ctrl, u16f code, u16f bind, u8f type);
+bool CtrlMap(struct Ctrl *ctrl, u16f code, u16f bind, u8f type);
 
-struct Axis *CtrlGet(Ctrl *ctrl, u16f code, u8f type);
+struct Axis *CtrlGet(struct Ctrl *ctrl, u16f code, u8f type);
 
-bool CtrlPoll(Ctrl *ctrl, struct RecordBuffer *buf);
+bool CtrlPoll(struct Ctrl *ctrl, struct RecordBuffer *buf);

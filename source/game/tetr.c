@@ -33,7 +33,7 @@ struct TetrMap NewTetrMap(u8 *blks, size_t wid, size_t hgt)
     };
 }
 
-void TetrMapToTermBuf(struct TetrMap *map, struct TermBuf *term)
+void TetrMapToTermBuf(struct TetrMap *map, struct Terminal *term)
 {
     static const u8f blk_colors[8] = { 8, 14, 11, 13, 10, 9, 12, 3 };
 
@@ -42,8 +42,8 @@ void TetrMapToTermBuf(struct TetrMap *map, struct TermBuf *term)
         size_t map_i = y * map->wid + x;
         size_t buf_i = (y + map->y) * term->wid + (x + map->x) * 2;
 
-        struct CharBlk4 *a = &term->blks[buf_i];
-        struct CharBlk4 *b = &term->blks[buf_i + 1];
+        struct TChar4 *a = &term->blks[buf_i];
+        struct TChar4 *b = &term->blks[buf_i + 1];
 
         if (map->blks[map_i] == 0) {
             a->ch = '(';

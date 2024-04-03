@@ -3,23 +3,23 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <math.h>
 
 #include "input.h"
-#include "instance.h"
 #include "winhandler.h"
+#include "term.h"
 
-bool WindowsInit(struct Window *window)
+bool WindowsInit(struct Terminal *term)
 {
-    if (!WinInitInputHandle())
-        return false;
-
-    if (!WinInitTimer())
+    if (!WinInitHandles())
         return false;
 
     if (!WinInitConsole())
         return false;
 
-    
+    if (!WinGetRefreshRate(&term->refresh_rate))
+        return false;
 
     return true;
 }
@@ -31,5 +31,10 @@ bool WindowsBlockInput(struct RecordBuffer *buf)
 
 bool WindowsWait(double seconds)
 {
-    return WinWait(seconds);
+    struct timespec duration = {
+        .tv_sec = seconds,
+        .tv_nsec = fmod(seconds, 1) * 1e9
+    };
+
+    return WinWait(duration);
 }

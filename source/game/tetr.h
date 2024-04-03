@@ -23,6 +23,6 @@ struct TetrMap {
 
 struct TetrMap NewTetrMap(u8 *blks, size_t wid, size_t hgt);
 
-void TetrMapToTermBuf(struct TetrMap *map, struct TermBuf *term);
+void TetrMapToTermBuf(struct TetrMap *map, struct Terminal *term);
 
 bool TetrCollisionCheck(struct TetrMap *board, struct TetrMap *piece, int dx, int dy);

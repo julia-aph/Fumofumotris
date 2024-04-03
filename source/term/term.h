@@ -6,24 +6,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "fumotris.h"
 
-struct CharBlk4 {
+struct TChar4 {
     char ch;
     u8 bg : 4;
     u8 fg : 4;
 };
 
-struct TermBuf {
+struct Terminal {
     size_t wid;
     size_t hgt;
     size_t area;
-    struct CharBlk4 *blks;
+    u16f refresh_rate;
+    struct TChar4 *blks;
+
+    pthread_mutex_t mutex;
+    pthread_cond_t is_initialized;
+    pthread_cond_t draw_ready;
 };
 
-struct TermBuf NewTermBuf(struct CharBlk4 *blks, size_t wid, size_t hgt);
+struct Terminal NewTerm(struct TChar4 *blks, size_t wid, size_t hgt);
 
-size_t TermMaxChars(struct TermBuf *term);
+size_t TermBufSize(struct Terminal *term);
 
-size_t TermBufToChars(struct TermBuf *term, char *buf, size_t max_chars);
+size_t TermOut(struct Terminal *term, char *buf, size_t max_chars);

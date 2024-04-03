@@ -11,6 +11,8 @@ bool WinInitHandles();
 
 bool WinInitConsole();
 
+bool WinGetRefreshRate(u32f *out);
+
 bool WinBlockInput(struct RecordBuffer *buf);
 
-bool WinWait(double seconds);
+bool WinWait(struct timespec relative);

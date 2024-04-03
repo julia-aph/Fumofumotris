@@ -10,10 +10,21 @@
 #include "fumotris.h"
 #include "term.h"
 #include "tetr.h"
+#include "event.h"
 
 #ifdef _WIN32
 #include "win.h"
 #endif
+
+struct Instance {
+    struct Terminal term;
+    struct Ctrl ctrl;
+    struct RecordBuffer rec_buf;
+
+    struct Delegate on_start;
+    struct Delegate on_draw;
+    struct Delegate on_update;
+};
 
 const u8 I[16] = {
     0, 0, 0, 0,
@@ -79,37 +90,59 @@ const struct CtrlBind ctrl_binds[12] = {
     { MOUSE, 0, JOYSTICK }
 };
 
-void Update(Ctrl *ctrl)
+void Draw(struct Terminal *term)
 {
+    pthread_mutex_lock(&term->mutex);
 
+    struct TChar4 term_blks[term->area];
+
+    pthread_cond_signal(&term->is_initialized);
+    pthread_mutex_unlock(&term->mutex);
+
+    size_t buf_size = TermBufSize(term);
+    char buf[buf_size];
+
+    while (true) {
+        pthread_mutex_lock(&term->mutex);
+        pthread_cond_wait(&term->draw_ready, &term->mutex);
+
+        TermOut(term, buf, buf_size);
+
+        pthread_mutex_unlock(&term->mutex);
+
+        puts(buf);
+    }
 }
 
-void Loop(Ctrl *ctrl, struct RecordBuffer *in_buf)
+void Update(struct Terminal *term, struct Ctrl *ctrl, struct RecordBuffer *rec_buf)
 {
-    struct CharBlk4 term_blks[20 * 20];
-    struct TermBuf term = NewTermBuf(term_blks, 20, 20);
+    pthread_mutex_lock(&term->mutex);
+    pthread_cond_wait(&term->is_initialized, &term->mutex);
+    pthread_mutex_unlock(&term->mutex);
 
-    size_t out_max = TermMaxChars(&term);
-    char out[out_max];
+    while (true) {
+        // Input
+        pthread_mutex_lock(&rec_buf->mutex);
+        CtrlPoll(ctrl, rec_buf);
+        pthread_mutex_unlock(&rec_buf->mutex);
 
-    u8 board_blks[10 * 20];
-    struct TetrMap board = NewTetrMap(board_blks, 10, 20);
+        // Game logic
+        
 
-    u8 falling_blks[4 * 4];
-    struct TetrMap falling = NewTetrMap(falling_blks, 4, 4);
-    memcpy(falling_blks, I, falling.area);
-
-    for (int i = 0; i < 7779997; i++) {
-        CtrlPoll(ctrl, in_buf);
-
-        TetrMapToTermBuf(&board, &term);
-        TetrMapToTermBuf(&falling, &term);
-
-        TermBufToChars(&term, out, out_max);
-        puts(out);
-
-        WindowsWait(1.0/30);
+        // Draw
+        pthread_mutex_lock(&term->mutex);
+        pthread_cond_signal(&term->draw_ready);
+        pthread_mutex_unlock(&term->mutex);
     }
+}
+
+void Loop(struct Ctrl *ctrl, struct RecordBuffer *rec_buf)
+{
+    pthread_t draw_thread;
+    pthread_create(&draw_thread, nullptr, Draw, &term);
+
+    pthread_t update_thread;
+    pthread_create(&update_thread, nullptr, Update, &term);
 }
 
 int main()
@@ -119,33 +152,43 @@ int main()
         exit(1);
     #endif
 
-    struct bkt code_bkts[code_count];
-    struct dict codes = {
+    struct ctrl_bkt code_bkts[code_count];
+    struct ctrl_dict codes = {
         .capacity = code_count,
         .filled = 0,
         .bkts = code_bkts
     };
-    struct bkt bind_bkts[code_count];
-    struct dict binds = {
+    struct ctrl_bkt bind_bkts[code_count];
+    struct ctrl_dict binds = {
         .capacity = code_count,
         .filled = 0,
         .bkts = bind_bkts
     };
     struct Axis axes[code_count];
-    Ctrl ctrl = NewCtrl(&codes, &binds, axes);
+    struct Ctrl ctrl = NewCtrl(&codes, &binds, axes);
 
     for (size_t i = 0; i < code_count; i++) {
         const struct CtrlBind *bind = &ctrl_binds[i];
         CtrlMap(&ctrl, bind->code, bind->bind, bind->type);
     }
 
-    struct RecordBuffer in_buf = {
+    struct RecordBuffer rec_buf = {
         .count = 0,
         .mutex = PTHREAD_MUTEX_INITIALIZER
     };
 
-    StartInput(&ctrl, &in_buf);
-    Loop(&ctrl, &in_buf);
+    struct Instance game = {
+        .term = NewTerm(nullptr, 20, 20),
+        .ctrl = NewCtrl(),
+
+        .on_start = NewDelegate(16),
+        .on_draw = NewDelegate(16),
+        .on_update = NewDelegate(16)
+    };
+
+    StartInput(&ctrl, &rec_buf);
+    Loop(&ctrl, &rec_buf);
+
     JoinInput(&ctrl);
 
     return 0;

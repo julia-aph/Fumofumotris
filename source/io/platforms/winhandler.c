@@ -10,7 +10,7 @@
 #include "fumotris.h"
 #include "gametime.h"
 #include "input.h"
-#include "instance.h"
+#include "term.h"
 
 struct Windows {
     HANDLE input_handle;
@@ -54,7 +54,7 @@ bool WinInitConsole()
     return SetConsoleMode(windows.input_handle, mode);
 }
 
-bool WinGetRefreshRate(struct Window *window)
+bool WinGetRefreshRate(u32f *out)
 {
     LPDEVMODE mode;
     if(!EnumDisplaySettingsA(
@@ -64,7 +64,7 @@ bool WinGetRefreshRate(struct Window *window)
     ))
         return false;
 
-    window->fps = mode->dmDisplayFrequency;
+    *out = mode->dmDisplayFrequency;
     return true;
 }
 
@@ -147,19 +147,17 @@ bool WinBlockInput(struct RecordBuffer *buf)
         if (!include)
             continue;
 
-        buf->records[buf->count] = record;
-        buf->count += 1;
+        buf->records[buf->count++] = record;
     }
 
     pthread_mutex_unlock(&buf->mutex);
     return true;
 }
 
-bool WinWait(struct timespec duration)
+bool WinWait(struct timespec relative)
 {
     LARGE_INTEGER duration;
-    duration.QuadPart = (u64)(-10000000.0 * seconds);
-    
+    duration.QuadPart = -10000000 * relative.tv_sec - relative.tv_nsec / 100;
 
     if (!SetWaitableTimer(
         windows.draw_handles[0],    // Timer

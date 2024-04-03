@@ -5,33 +5,47 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "fumotris.h"
 
-struct CharBlk4 {
+struct TChar4 {
     char ch;
     u8 bg : 4;
     u8 fg : 4;
 };
 
-struct TermBuf {
+struct Terminal {
     size_t wid;
     size_t hgt;
     size_t area;
-    struct CharBlk4 *blks;
+    u16f refresh_rate;
+    struct TChar4 *blks;
+
+    pthread_mutex_t mutex;
+    pthread_cond_t is_initialized;
+    pthread_cond_t draw_ready;
 };
 
-struct TermBuf NewTermBuf(struct CharBlk4 *blks, size_t wid, size_t hgt)
+struct Terminal NewTerm(struct TChar4 *blks, size_t wid, size_t hgt)
 {
     size_t area = wid * hgt;
-    memset(blks, 0, sizeof(struct CharBlk4) * area);
+    memset(blks, 0, sizeof(struct TChar4) * area);
 
-    return (struct TermBuf) {
-        wid, hgt, area, blks
+    return (struct Terminal) {
+        .wid = wid,
+        .hgt = hgt,
+        .area = area,
+        .refresh_rate = 60,
+        .blks = blks,
+        
+        .mutex = PTHREAD_MUTEX_INITIALIZER,
+        .is_initialized = PTHREAD_COND_INITIALIZER,
+        .draw_ready = PTHREAD_COND_INITIALIZER
     };
 }
 
-size_t TermMaxChars(struct TermBuf *term)
+size_t TermBufSize(struct Terminal *term)
 {
     static const size_t max_color_str_len = 10;
     static const size_t reset_str_len = 7;
@@ -52,7 +66,7 @@ size_t printcol4(char *buf, size_t at, size_t max, u8f col, char ch)
     return snprintf(buf + at, max - at, "\x1b[%um%c", col, ch);
 }
 
-size_t printblk4(char *buf, size_t at, size_t max, struct CharBlk4 *blk)
+size_t printblk4(char *buf, size_t at, size_t max, struct TChar4 *blk)
 {
     u8f bg;
     if (blk->bg < 8)
@@ -69,17 +83,17 @@ size_t printblk4(char *buf, size_t at, size_t max, struct CharBlk4 *blk)
     return snprintf(buf + at, max - at, "\x1b[%u;%um%c", bg, fg, blk->ch);
 }
 
-size_t TermBufToChars(struct TermBuf *term, char *buf, size_t max_chars)
+size_t TermOut(struct Terminal *term, char *buf, size_t n)
 {
     u8f last_bg = 0;
     u8f last_fg = 0;
 
-    size_t filled = snprintf(buf, max_chars, "\x1b[H\x1b[0m");
+    size_t filled = snprintf(buf, n, "\x1b[H\x1b[0m");
 
     for(size_t y = 0; y < term->hgt; y++) {
     for(size_t x = 0; x < term->wid; x++) {
         size_t i = y * term->wid + x;
-        struct CharBlk4 *blk = &term->blks[i];
+        struct TChar4 *blk = &term->blks[i];
         
         // DEBUG
         if (blk->ch == 0)
@@ -89,13 +103,13 @@ size_t TermBufToChars(struct TermBuf *term, char *buf, size_t max_chars)
         if (blk->bg != 0 and blk->bg != last_bg) {
             last_bg = blk->bg;
             if (blk->fg != 0 and blk->fg != last_fg) {
-                filled += printblk4(buf, filled, max_chars, blk);
+                filled += printblk4(buf, filled, n, blk);
                 last_fg = blk->fg;
             } else {
-                filled += printcol4(buf, filled, max_chars, blk->bg, blk->ch);
+                filled += printcol4(buf, filled, n, blk->bg, blk->ch);
             }
         } else if (blk->fg != 0 and blk->fg != last_fg) {
-            filled += printcol4(buf, filled, max_chars, blk->fg, blk->ch);
+            filled += printcol4(buf, filled, n, blk->fg, blk->ch);
             last_fg = blk->fg;
         } else {
             buf[filled] = blk->ch;
