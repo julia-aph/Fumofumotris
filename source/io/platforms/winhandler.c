@@ -68,7 +68,7 @@ bool WinGetRefreshRate(u32f *out)
     return true;
 }
 
-void set_key_record(struct CtrlRecord *record, KEY_EVENT_RECORD win_key)
+void set_key_record(struct Record *record, KEY_EVENT_RECORD win_key)
 {
     record->type = KEY;
     record->id = win_key.wVirtualKeyCode;
@@ -78,7 +78,7 @@ void set_key_record(struct CtrlRecord *record, KEY_EVENT_RECORD win_key)
         record->type = ESCAPE;
 }
 
-bool set_mouse_record(struct CtrlRecord *record, MOUSE_EVENT_RECORD win_mouse)
+bool set_mouse_record(struct Record *record, MOUSE_EVENT_RECORD win_mouse)
 {
     switch (win_mouse.dwEventFlags) {
     case MOUSE_WHEELED:
@@ -103,7 +103,7 @@ bool set_mouse_record(struct CtrlRecord *record, MOUSE_EVENT_RECORD win_mouse)
     return true;
 }
 
-bool dispatch_record(struct CtrlRecord *record, INPUT_RECORD win_record)
+bool dispatch_record(struct Record *record, INPUT_RECORD win_record)
 {
     switch (win_record.EventType) {
     case KEY_EVENT:
@@ -140,7 +140,7 @@ bool WinBlockInput(struct RecordBuffer *buf)
     pthread_mutex_lock(&buf->mutex);
 
     for (size_t i = 0; i < count; i++) {
-        struct CtrlRecord record;
+        struct Record record;
         record.timestamp = now;
 
         bool include = dispatch_record(&record, win_buf[i]);

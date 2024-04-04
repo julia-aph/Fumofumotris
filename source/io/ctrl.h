@@ -19,7 +19,7 @@ enum CtrlType {
     ESCAPE
 };
 
-struct CtrlRecord {
+struct Record {
     u16 id;
     u8 type;
 
@@ -40,12 +40,10 @@ struct CtrlRecord {
 };
 
 struct RecordBuffer {
-    struct CtrlRecord records[IO_BUF_SIZE];
+    struct Record records[IO_BUF_SIZE];
     size_t count;
     pthread_mutex_t mutex;
 };
-
-struct RecordBuffer NewInputBuffer();
 
 struct Axis {
     union {
@@ -105,7 +103,7 @@ struct Ctrl {
     pthread_mutex_t mutex;
 };
 
-struct Ctrl NewCtrl(struct ctrl_dict *codes, struct ctrl_dict *binds, struct Axis *axes);
+struct Ctrl NewCtrl();
 
 bool CtrlMap(struct Ctrl *ctrl, u16f code, u16f bind, u8f type);
 

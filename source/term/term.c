@@ -27,17 +27,14 @@ struct Terminal {
     pthread_cond_t draw_ready;
 };
 
-struct Terminal NewTerm(struct TChar4 *blks, size_t wid, size_t hgt)
+struct Terminal NewTerm(size_t wid, size_t hgt)
 {
-    size_t area = wid * hgt;
-    memset(blks, 0, sizeof(struct TChar4) * area);
-
     return (struct Terminal) {
         .wid = wid,
         .hgt = hgt,
-        .area = area,
+        .area = wid * hgt,
         .refresh_rate = 60,
-        .blks = blks,
+        .blks = nullptr,
         
         .mutex = PTHREAD_MUTEX_INITIALIZER,
         .is_initialized = PTHREAD_COND_INITIALIZER,

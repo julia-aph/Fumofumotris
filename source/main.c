@@ -90,49 +90,19 @@ const struct CtrlBind ctrl_binds[12] = {
     { MOUSE, 0, JOYSTICK }
 };
 
-void Draw(struct Terminal *term)
+void Draw(struct Instance *game)
 {
-    pthread_mutex_lock(&term->mutex);
-
-    struct TChar4 term_blks[term->area];
-
-    pthread_cond_signal(&term->is_initialized);
-    pthread_mutex_unlock(&term->mutex);
-
-    size_t buf_size = TermBufSize(term);
-    char buf[buf_size];
-
     while (true) {
-        pthread_mutex_lock(&term->mutex);
-        pthread_cond_wait(&term->draw_ready, &term->mutex);
-
-        TermOut(term, buf, buf_size);
-
-        pthread_mutex_unlock(&term->mutex);
-
-        puts(buf);
+        Call(&game->on_draw, game);
     }
 }
 
-void Update(struct Terminal *term, struct Ctrl *ctrl, struct RecordBuffer *rec_buf)
+void Update(struct Instance *game)
 {
-    pthread_mutex_lock(&term->mutex);
-    pthread_cond_wait(&term->is_initialized, &term->mutex);
-    pthread_mutex_unlock(&term->mutex);
+
 
     while (true) {
-        // Input
-        pthread_mutex_lock(&rec_buf->mutex);
-        CtrlPoll(ctrl, rec_buf);
-        pthread_mutex_unlock(&rec_buf->mutex);
-
-        // Game logic
-        
-
-        // Draw
-        pthread_mutex_lock(&term->mutex);
-        pthread_cond_signal(&term->draw_ready);
-        pthread_mutex_unlock(&term->mutex);
+        Call(&game->on_update, game);
     }
 }
 
@@ -178,7 +148,7 @@ int main()
     };
 
     struct Instance game = {
-        .term = NewTerm(nullptr, 20, 20),
+        .term = NewTerm(20, 20),
         .ctrl = NewCtrl(),
 
         .on_start = NewDelegate(16),

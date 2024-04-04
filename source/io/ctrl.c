@@ -19,7 +19,7 @@ enum CtrlType {
     ESCAPE
 };
 
-struct CtrlRecord {
+struct Record {
     u16 id;
     u8 type;
 
@@ -40,18 +40,10 @@ struct CtrlRecord {
 };
 
 struct RecordBuffer {
-    struct CtrlRecord records[IO_BUF_SIZE];
+    struct Record records[IO_BUF_SIZE];
     size_t count;
     pthread_mutex_t mutex;
 };
-
-struct RecordBuffer NewInputBuffer()
-{
-    struct RecordBuffer buf;
-    buf.count = 0;
-    buf.mutex = PTHREAD_MUTEX_INITIALIZER;
-    return buf;
-}
 
 struct Axis {
     union {
@@ -263,7 +255,7 @@ struct Axis *CtrlGet(struct Ctrl *ctrl, u16f code, u8f type)
     return code_bkt->axis;
 }
 
-void update_key(struct Axis *axis, struct CtrlRecord *record)
+void update_key(struct Axis *axis, struct Record *record)
 {
     if (record->data.key.is_down)
         axis->last_pressed = record->timestamp;
@@ -273,13 +265,13 @@ void update_key(struct Axis *axis, struct CtrlRecord *record)
     axis->data.key.is_down = record->data.key.is_down;
 }
 
-void update_axis(struct Axis *axis, struct CtrlRecord *record)
+void update_axis(struct Axis *axis, struct Record *record)
 {
     axis->data.axis.value = record->data.axis.value;
     axis->last_pressed = record->timestamp;
 }
 
-void update_joystick(struct Axis *axis, struct CtrlRecord *record)
+void update_joystick(struct Axis *axis, struct Record *record)
 {
     axis->data.joystick.x = record->data.joystick.x;
     axis->data.joystick.y = record->data.joystick.y;
@@ -289,7 +281,7 @@ void update_joystick(struct Axis *axis, struct CtrlRecord *record)
 bool CtrlPoll(struct Ctrl *ctrl, struct RecordBuffer *rec_buf)
 {
     for (size_t i = 0; i < rec_buf->count; i++) {
-        struct CtrlRecord *rec = &rec_buf->records[i];
+        struct Record *rec = &rec_buf->records[i];
 
         struct Axis *axis = find_axis(&ctrl->binds, rec->id, rec->type);
         if (axis == nullptr)

@@ -28,7 +28,7 @@ struct Terminal {
     pthread_cond_t draw_ready;
 };
 
-struct Terminal NewTerm(struct TChar4 *blks, size_t wid, size_t hgt);
+struct Terminal NewTerm(size_t wid, size_t hgt);
 
 size_t TermBufSize(struct Terminal *term);
 
