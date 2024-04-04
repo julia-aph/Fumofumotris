@@ -37,7 +37,7 @@ void Subscribe(struct Delegate *d, void (*event)(void *args))
     d->len += 1;
 }
 
-void Call(struct Delegate *d, void *args)
+void Invoke(struct Delegate *d, void *args)
 {
     for (size_t i = 0; i < d->len; i++) {
         d->events[i](args);

@@ -17,4 +17,4 @@ struct Delegate NewDelegate(size_t capacity);
 
 void Subscribe(struct Delegate *d, void (*event)(void *args));
 
-void Call(struct Delegate *d, void *args);
+void Invoke(struct Delegate *d, void *args);

@@ -146,8 +146,6 @@ void CtrlSet(
     ctrl->binds.capacity = b_len;
     ctrl->binds.bkts = bind_bkts;
     memset(bind_bkts, 0, sizeof(struct ctrl_bkt) * b_len);
-    
-    
 }
 
 struct ctrl_bkt *get_bkt(struct ctrl_dict *dict, size_t i)

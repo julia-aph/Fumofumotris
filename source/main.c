@@ -90,19 +90,60 @@ const struct CtrlBind ctrl_binds[12] = {
     { MOUSE, 0, JOYSTICK }
 };
 
-void Draw(struct Instance *game)
+bool DrawUpdate(struct Terminal *term, struct Instance *game, char *buf)
 {
-    while (true) {
-        Call(&game->on_draw, game);
+    bool is_update;
+
+    TermLock(term);
+    {
+        is_update = TermWaitUpdate(term);
+        if(is_update) {
+            Invoke(&game->on_draw, game);
+            TermOut(term, buf);
+        }
     }
+    TermUnlock(term);
+
+    return is_update;
+}
+
+void Draw(struct Terminal *term, struct Instance *game)
+{
+    struct TChar4 buf0[term->area];
+    struct TChar4 buf1[term->area];
+    
+    TermLock(term);
+    {
+        TermSetBufs(term, buf0, buf1);
+    }
+    TermUnlock(term);
+    TermSignalSafe(term);
+
+    char buf[term->buf_size];
+    
+    while (true) {
+        if (!DrawUpdate(term, game, buf))
+            break;
+        
+        puts(buf);
+    }
+
+    
 }
 
 void Update(struct Instance *game)
 {
-
+    WaitSafeTerm(&game->term);
 
     while (true) {
-        Call(&game->on_update, game);
+        // Input
+        CtrlPoll(&game->ctrl, &game->rec_buf);
+
+        // Game logic
+        Invoke(&game->on_update, game);
+
+        // Draw
+        UpdateTerm(&game->term);
     }
 }
 
