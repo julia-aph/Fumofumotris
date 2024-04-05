@@ -23,17 +23,7 @@ struct Terminal {
     size_t area;
     size_t buf_size;
 
-    struct TChar4 *bufs[2];
-    u8f switch_read;
-    u8f switch_write;
-
-    pthread_mutex_t mutex;
-    pthread_cond_t update;
-
-    struct {
-        u8f is_writing : 1;
-        u8f resize : 1;
-    } flags;
+    struct TChar4 *buf;
 };
 
 size_t buf_size(size_t area,  size_t hgt)
@@ -58,24 +48,13 @@ struct Terminal NewTerm(size_t wid, size_t hgt)
 
         .area = area,
         .buf_size = 0,
-
-        .bufs = nullptr,
-        .switch_read = 0,
-        .switch_write = 0,
-        
-        .mutex = PTHREAD_MUTEX_INITIALIZER,
-        .update = PTHREAD_COND_INITIALIZER,
-        
-        .flags.is_writing = true,
-        .flags.resize = false
     };
 }
 
-void TermSetBufs(struct Terminal *term, struct TChar4 *buf0, struct TChar4 *buf1)
+void TermSetBufs(struct Terminal *term, struct TChar4 *buf)
 {
     term->buf_size = buf_size(term->area, term->hgt);
-    term->bufs[0] = buf0;
-    term->bufs[1] = buf1;
+    term->buf = buf;
 }
 
 void TermResize(struct Terminal *term, size_t wid, size_t hgt)
@@ -83,81 +62,11 @@ void TermResize(struct Terminal *term, size_t wid, size_t hgt)
     size_t area = wid * hgt;
     size_t buf_size = term_buf_size(area, hgt);
     
-    pthread_mutex_lock(&term->mutex);
-    {
-        term->wid = wid;
-        term->hgt = hgt;
+    term->wid = wid;
+    term->hgt = hgt;
 
-        term->area = area;
-        term->buf_size = buf_size;
-
-        term->flags.resize = true;
-        
-        pthread_cond_signal(&term->update);
-    }
-    pthread_mutex_unlock(&term->mutex);
-}
-
-void UpdateTerm(struct Terminal *term)
-{
-    pthread_mutex_lock(&term->mutex);
-    {
-        term->switch_read = term->switch_write;
-        term->switch_write = (term->switch_write + 1) % 2;
-
-        term->flags.is_writing = false;
-
-        pthread_cond_signal(&term->update);
-    }
-    pthread_mutex_unlock(&term->mutex);
-}
-
-bool TermWaitUpdate(struct Terminal *term)
-{
-    while (term->flags.is_writing) {
-        pthread_cond_wait(&term->update, &term->mutex);
-
-        if (term->flags.resize) {
-            term->flags.resize = false;
-            return false;
-        }
-    }
-    return true;
-}
-
-void TermSignalSafe(struct Terminal *term)
-{
-    pthread_cond_signal(&term->update);
-}
-
-void WaitSafeTerm(struct Terminal *term)
-{
-    pthread_mutex_lock(&term->mutex);
-    while (term->bufs == nullptr) {
-        pthread_cond_wait(&term->update, &term->mutex);
-    }
-    
-    pthread_mutex_unlock(&term->mutex);
-}
-
-void TermLock(struct Terminal *term)
-{
-    pthread_mutex_lock(&term->mutex);
-}
-
-void TermUnlock(struct Terminal *term)
-{
-    pthread_mutex_unlock(&term->mutex);
-}
-
-size_t printcol4(char *buf, size_t at, size_t max, u8f col, char ch)
-{
-    if (col < 8)
-        col += 30;
-    else
-        col += 82;
-
-    return snprintf(buf + at, max - at, "\x1b[%um%c", col, ch);
+    term->area = area;
+    term->buf_size = buf_size;
 }
 
 size_t printblk4(char *buf, size_t at, size_t max, struct TChar4 *blk)
@@ -177,6 +86,29 @@ size_t printblk4(char *buf, size_t at, size_t max, struct TChar4 *blk)
     return snprintf(buf + at, max - at, "\x1b[%u;%um%c", bg, fg, blk->ch);
 }
 
+size_t u8_to_buf(char *buf, u8f x)
+{
+    
+}
+
+size_t print4(char *buf, struct TChar4 *blk)
+{
+    u8f bg = blk->bg + (blk->bg < 8 ? 40 : 92);
+    u8f fg = blk->fg + (blk->fg < 8 ? 30 : 82);
+
+    memcpy(buf, "\x1b[", 2);
+    
+}
+
+size_t TermOut_(struct Terminal *term, char *buf)
+{
+    struct TChar4 last;
+
+    size_t filled = 0;
+    memcpy(buf, "\x1b[H\x1b[0m", 7);
+
+}
+
 size_t TermOut(struct Terminal *term, char *buf)
 {
     u8f last_bg = 0;
@@ -187,7 +119,7 @@ size_t TermOut(struct Terminal *term, char *buf)
     for(size_t y = 0; y < term->hgt; y++) {
     for(size_t x = 0; x < term->wid; x++) {
         size_t i = y * term->wid + x;
-        struct TChar4 *blk = &term->bufs[i];
+        struct TChar4 *blk = &term->buf[i];
         
         // DEBUG
         if (blk->ch == 0)
