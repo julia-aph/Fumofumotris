@@ -14,13 +14,13 @@
 
 void *block_input(void *args_ptr)
 {
-    struct RecordBuffer *buf = args_ptr;
+    struct RecordBuffer *rec_buf = args_ptr;
 
     while (true) {
         bool success;
 
         #ifdef _WIN32
-        success = WindowsBlockInput(buf);
+        success = WindowsBlockInput(rec_buf);
         #endif
         
         if (!success) {
@@ -32,9 +32,9 @@ void *block_input(void *args_ptr)
     return nullptr;
 }
 
-void StartInput(struct Ctrl *ctrl, struct RecordBuffer *buf)
+void StartInput(struct Ctrl *ctrl)
 {
-    pthread_create(&ctrl->thread, nullptr, block_input, buf);
+    pthread_create(&ctrl->thread, nullptr, block_input, &ctrl->buf);
 }
 
 void JoinInput(struct Ctrl *ctrl)

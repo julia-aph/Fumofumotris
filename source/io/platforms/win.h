@@ -7,8 +7,9 @@
 #include <stdlib.h>
 
 #include "input.h"
+#include "term.h"
 
-bool WindowsInit();
+bool WindowsInit(struct Terminal *term);
 
 bool WindowsBlockInput(struct RecordBuffer *buf);
 

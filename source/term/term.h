@@ -20,35 +20,18 @@ struct Terminal {
     size_t wid;
     size_t hgt;
     size_t area;
-    u16f refresh_rate;
-
-    struct TChar4 *bufs[2];
+    struct TChar4 *blks;
+    
     size_t buf_size;
-    u8f switch_read;
-    u8f switch_write;
+    char *buf;
 
-    pthread_mutex_t mutex;
-    pthread_cond_t update;
-
-    struct {
-        u8f is_writing : 1;
-        u8f resize : 1;
-    } flags;
+    u16f refresh_rate;
 };
 
-struct Terminal NewTerm(size_t wid, size_t hgt);
+bool NewTerm(struct Terminal *term, size_t wid, size_t hgt);
 
-void TermSetBufs(struct Terminal *term, struct TChar4 *buf0, struct TChar4 *buf1);
+bool ResizeTerm(struct Terminal *term, size_t wid, size_t hgt);
 
-void TermResize(struct Terminal *term, size_t wid, size_t hgt);
+void FreeTerm(struct Terminal *term);
 
-void UpdateTerm(struct Terminal *term);
-bool TermWaitUpdate(struct Terminal *term);
-
-void TermSignalSafe(struct Terminal *term);
-void WaitSafeTerm(struct Terminal *term);
-
-void TermLock(struct Terminal *term);
-void TermUnlock(struct Terminal *term);
-
-size_t TermOut(struct Terminal *term, char *buf);
+size_t TermOut(struct Terminal *term);

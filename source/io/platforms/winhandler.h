@@ -11,7 +11,7 @@ bool WinInitHandles();
 
 bool WinInitConsole();
 
-bool WinGetRefreshRate(u32f *out);
+bool WinGetRefreshRate(u16f *out);
 
 bool WinBlockInput(struct RecordBuffer *buf);
 

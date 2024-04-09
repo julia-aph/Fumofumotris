@@ -99,14 +99,16 @@ struct Ctrl {
     struct ctrl_dict codes;
     struct ctrl_dict binds;
 
+    struct RecordBuffer buf;
     pthread_t thread;
-    pthread_mutex_t mutex;
 };
 
-struct Ctrl NewCtrl();
+bool NewCtrl(struct Ctrl *ctrl, size_t code_cap, size_t bind_cap);
+
+void FreeCtrl(struct Ctrl *ctrl);
 
 bool CtrlMap(struct Ctrl *ctrl, u16f code, u16f bind, u8f type);
 
 struct Axis *CtrlGet(struct Ctrl *ctrl, u16f code, u8f type);
 
-bool CtrlPoll(struct Ctrl *ctrl, struct RecordBuffer *buf);
+bool CtrlPoll(struct Ctrl *ctrl);

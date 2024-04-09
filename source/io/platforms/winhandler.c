@@ -14,31 +14,22 @@
 
 struct Windows {
     HANDLE input_handle;
-    HANDLE draw_handles[2];
+    HANDLE timer;
 };
-static struct Windows windows;
+static struct Windows win;
 
 bool WinInitHandles()
 {
-    windows.input_handle = GetStdHandle(STD_INPUT_HANDLE);
-    if (windows.input_handle == INVALID_HANDLE_VALUE)
+    win.input_handle = GetStdHandle(STD_INPUT_HANDLE);
+    if (win.input_handle == INVALID_HANDLE_VALUE)
         return false;
 
-    windows.draw_handles[0] = CreateWaitableTimer(
-        NULL,   // Timer attributes
-        TRUE,   // Manual reset
-        NULL    // Name
+    win.timer = CreateWaitableTimer(
+        NULL,                       // Timer attributes
+        TRUE,                       // Manual reset
+        NULL                        // Name
     );
-    if (!windows.draw_handles[0])
-        return false;
-
-    windows.draw_handles[1] = CreateEvent(
-        NULL,   // Event attributes
-        FALSE,  // Manual reset
-        FALSE,  // Initial state
-        NULL    // Name
-    );
-    if (!windows.draw_handles[1])
+    if (!win.timer)
         return false;
 
     return true;
@@ -51,20 +42,23 @@ bool WinInitConsole()
         | ENABLE_MOUSE_INPUT
         | ENABLE_WINDOW_INPUT 
         | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    return SetConsoleMode(windows.input_handle, mode);
+    return SetConsoleMode(win.input_handle, mode) != 0;
 }
 
-bool WinGetRefreshRate(u32f *out)
+bool WinGetRefreshRate(u16f *out)
 {
-    LPDEVMODE mode;
+    DEVMODE mode;
+    mode.dmSize = sizeof(DEVMODE);
+    mode.dmDriverExtra = 0;
+
     if(!EnumDisplaySettingsA(
-        NULL,                   // Device name (null for current)
-        ENUM_CURRENT_SETTINGS,  // Mode
-        &mode                   // Out
+        NULL,                       // Device name (null for current)
+        ENUM_CURRENT_SETTINGS,      // Mode
+        &mode                       // Out
     ))
         return false;
 
-    *out = mode->dmDisplayFrequency;
+    *out = mode.dmDisplayFrequency;
     return true;
 }
 
@@ -112,8 +106,8 @@ bool dispatch_record(struct Record *record, INPUT_RECORD win_record)
     case MOUSE_EVENT:
         return set_mouse_record(record, win_record.Event.MouseEvent);
     case WINDOW_BUFFER_SIZE_EVENT:
-        set_window_record(record, win_record.Event.WindowBufferSizeEvent);
-        break;
+        // TODO: Handle window resizing
+        return false;
     default:
         record->type = ESCAPE;
     }
@@ -127,10 +121,10 @@ bool WinBlockInput(struct RecordBuffer *buf)
     DWORD count;
 
     if (!ReadConsoleInput(
-        windows.input_handle,   // Input handle
-        win_buf,                // Record buffer
-        win_size,               // Record buffer length
-        &count                  // Out number of records
+        win.input_handle,           // Input handle
+        win_buf,                    // Record buffer
+        win_size,                   // Record buffer length
+        &count                      // Out number of records
     ))
         return false;
     
@@ -160,7 +154,7 @@ bool WinWait(struct timespec relative)
     duration.QuadPart = -10000000 * relative.tv_sec - relative.tv_nsec / 100;
 
     if (!SetWaitableTimer(
-        windows.draw_handles[0],    // Timer
+        win.timer,                  // Timer
         &duration,                  // Duration
         0,                          // Period
         NULL,                       // Completion coroutine
@@ -169,12 +163,7 @@ bool WinWait(struct timespec relative)
     ))
         return false;
 
-    DWORD result = WaitForMultipleObjects(
-        2,                          // Handle count
-        windows.draw_handles,       // Handles
-        FALSE,                      // Wait for all
-        INFINITE                    // Timeout
-    );
+    DWORD result = WaitForSingleObject(win.timer, INFINITE);
     if (result != WAIT_OBJECT_0)
         return false;
     

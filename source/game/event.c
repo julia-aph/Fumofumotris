@@ -12,7 +12,7 @@ struct Delegate {
     void (**events)(void *args);
 };
 
-inline size_t delegate_size(size_t capacity)
+size_t delegate_size(size_t capacity)
 {
     return sizeof(void(*)(void *)) * capacity;
 }

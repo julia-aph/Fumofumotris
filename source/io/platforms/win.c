@@ -10,17 +10,22 @@
 #include "winhandler.h"
 #include "term.h"
 
+#include <windows.h>
+
 bool WindowsInit(struct Terminal *term)
 {
     if (!WinInitHandles())
         return false;
+    printf("shid ");
 
-    if (!WinInitConsole())
+    if (!WinInitConsole()) {
+        printf("%u\n", GetLastError());
         return false;
-
+    }
+    printf("console");
     if (!WinGetRefreshRate(&term->refresh_rate))
         return false;
-
+    printf("???");
     return true;
 }
 
