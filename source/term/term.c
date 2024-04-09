@@ -35,9 +35,14 @@ size_t term_buf_size(size_t area,  size_t hgt)
     return reset_str_len + (max_color_str_len + 1) * area + hgt + 1;
 }
 
-size_t blks_size(size_t area)
+struct TChar4 *alloc_blks(size_t area)
 {
-    return area * sizeof(struct TChar4);
+    return calloc(area, sizeof(struct TChar4));
+}
+
+char *alloc_buf(size_t buf_size)
+{
+    return malloc(buf_size);
 }
 
 bool NewTerm(struct Terminal *term, size_t wid, size_t hgt)
@@ -45,17 +50,17 @@ bool NewTerm(struct Terminal *term, size_t wid, size_t hgt)
     size_t area = wid * hgt;
     size_t buf_size = term_buf_size(area, hgt);
 
-    struct TChar4 *tchs = malloc(blks_size(area));
-    char *buf = malloc(buf_size);
+    struct TChar4 *blks = alloc_blks(area);
+    char *buf = alloc_buf(buf_size);
     
-    if (tchs == nullptr or buf == nullptr)
+    if (blks == nullptr or buf == nullptr)
         return false;
 
     *term = (struct Terminal) {
         .wid = wid,
         .hgt = hgt,
         .area = area,
-        .blks = tchs,
+        .blks = blks,
 
         .buf_size = buf_size,
         .buf = buf,
@@ -70,8 +75,9 @@ bool ResizeTerm(struct Terminal *term, size_t wid, size_t hgt)
     size_t area = wid * hgt;
     size_t buf_size = term_buf_size(area, hgt);
     
-    struct TChar4 *tchs = realloc(term->blks, blks_size(area));
+    struct TChar4 *tchs = realloc(term->blks, area * sizeof(struct TChar4));
     char *buf = realloc(term->buf, buf_size);
+    
     if (tchs == nullptr or buf == nullptr)
         return false;
 

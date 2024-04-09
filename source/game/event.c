@@ -17,13 +17,19 @@ size_t delegate_size(size_t capacity)
     return sizeof(void(*)(void *)) * capacity;
 }
 
-struct Delegate NewDelegate(size_t capacity)
+bool NewDelegate(struct Delegate *d, size_t capacity)
 {
-    return (struct Delegate) {
+    void (**events)(void *args) = malloc(delegate_size(capacity));
+    
+    if (events == nullptr)
+        return false;
+
+    *d = (struct Delegate) {
         .len = 0,
         .capacity = capacity,
         .events = malloc(delegate_size(capacity))
     };
+    return true;
 }
 
 void Subscribe(struct Delegate *d, void (*event)(void *args))

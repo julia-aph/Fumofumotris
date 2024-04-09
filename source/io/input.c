@@ -32,12 +32,12 @@ void *block_input(void *args_ptr)
     return nullptr;
 }
 
-void StartInput(struct Ctrl *ctrl)
+void StartInput(struct Controller *ctrl)
 {
     pthread_create(&ctrl->thread, nullptr, block_input, &ctrl->buf);
 }
 
-void JoinInput(struct Ctrl *ctrl)
+void JoinInput(struct Controller *ctrl)
 {
     pthread_join(ctrl->thread, nullptr);
 }

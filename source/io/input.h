@@ -8,6 +8,6 @@
 #include "ctrl.h"
 #include "fumotris.h"
 
-void StartInput(struct Ctrl *ctrl);
+void StartInput(struct Controller *ctrl);
 
-void JoinInput(struct Ctrl *ctrl);
+void JoinInput(struct Controller *ctrl);

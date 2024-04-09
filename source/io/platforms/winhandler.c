@@ -39,9 +39,9 @@ bool WinInitConsole()
 {
     DWORD mode = ENABLE_EXTENDED_FLAGS
         | ENABLE_PROCESSED_INPUT
+        | ENABLE_PROCESSED_OUTPUT
         | ENABLE_MOUSE_INPUT
-        | ENABLE_WINDOW_INPUT 
-        | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        | ENABLE_WINDOW_INPUT;
     return SetConsoleMode(win.input_handle, mode) != 0;
 }
 
@@ -62,34 +62,36 @@ bool WinGetRefreshRate(u16f *out)
     return true;
 }
 
-void set_key_record(struct Record *record, KEY_EVENT_RECORD win_key)
+void set_key_record(struct InputRecord *rec, KEY_EVENT_RECORD win_key)
 {
-    record->type = KEY;
-    record->id = win_key.wVirtualKeyCode;
-    record->data.key.is_down = win_key.bKeyDown;
+    rec->type = KEY;
+    rec->bind = win_key.wVirtualKeyCode;
+
+    rec->button.is_down = win_key.bKeyDown;
+    rec->button.is_up = !win_key.bKeyDown;
 
     if (win_key.wVirtualKeyCode == VK_ESCAPE)
-        record->type = ESCAPE;
+        rec->type = ESCAPE;
 }
 
-bool set_mouse_record(struct Record *record, MOUSE_EVENT_RECORD win_mouse)
+bool set_mouse_record(struct InputRecord *rec, MOUSE_EVENT_RECORD win_mouse)
 {
     switch (win_mouse.dwEventFlags) {
     case MOUSE_WHEELED:
-        record->type = AXIS;
-        record->id = 0;
-        record->data.axis.value = win_mouse.dwButtonState;
+        rec->type = AXIS;
+        rec->bind = 0;
+        rec->axis.value = win_mouse.dwButtonState;
         break;
     case MOUSE_HWHEELED:
-        record->type = AXIS;
-        record->id = 1;
-        record->data.axis.value = win_mouse.dwButtonState;
+        rec->type = AXIS;
+        rec->bind = 1;
+        rec->axis.value = win_mouse.dwButtonState;
         break;
     case MOUSE_MOVED:
-        record->type = JOYSTICK;
-        record->id = 0;
-        record->data.joystick.x = win_mouse.dwMousePosition.X;
-        record->data.joystick.y = win_mouse.dwMousePosition.Y;
+        rec->type = JOYSTICK;
+        rec->bind = 0;
+        rec->joystick.x = win_mouse.dwMousePosition.X;
+        rec->joystick.y = win_mouse.dwMousePosition.Y;
         break;
     default:
         return false;
@@ -97,19 +99,19 @@ bool set_mouse_record(struct Record *record, MOUSE_EVENT_RECORD win_mouse)
     return true;
 }
 
-bool dispatch_record(struct Record *record, INPUT_RECORD win_record)
+bool dispatch_record(struct InputRecord *rec, INPUT_RECORD win_rec)
 {
-    switch (win_record.EventType) {
+    switch (win_rec.EventType) {
     case KEY_EVENT:
-        set_key_record(record, win_record.Event.KeyEvent);
+        set_key_record(rec, win_rec.Event.KeyEvent);
         break;
     case MOUSE_EVENT:
-        return set_mouse_record(record, win_record.Event.MouseEvent);
+        return set_mouse_record(rec, win_rec.Event.MouseEvent);
     case WINDOW_BUFFER_SIZE_EVENT:
         // TODO: Handle window resizing
         return false;
     default:
-        record->type = ESCAPE;
+        rec->type = ESCAPE;
     }
     return true;
 }
@@ -134,14 +136,14 @@ bool WinBlockInput(struct RecordBuffer *buf)
     pthread_mutex_lock(&buf->mutex);
 
     for (size_t i = 0; i < count; i++) {
-        struct Record record;
-        record.timestamp = now;
+        struct InputRecord rec;
+        rec.timestamp = now;
 
-        bool include = dispatch_record(&record, win_buf[i]);
+        bool include = dispatch_record(&rec, win_buf[i]);
         if (!include)
             continue;
 
-        buf->records[buf->count++] = record;
+        buf->records[buf->count++] = rec;
     }
 
     pthread_mutex_unlock(&buf->mutex);

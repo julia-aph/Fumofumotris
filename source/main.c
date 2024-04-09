@@ -16,6 +16,15 @@
 #include "win.h"
 #endif
 
+struct Instance {
+    struct Controller ctrl;
+    struct Terminal term;
+
+    struct Delegate on_start;
+    struct Delegate on_update;
+    struct Delegate on_draw;
+};
+
 const u8 I[16] = {
     0, 0, 0, 0,
     0, 0, 0, 0,
@@ -58,16 +67,6 @@ const u8 L[9] = {
     0, 0, 0
 };
 
-struct Instance {
-    struct Ctrl ctrl;
-
-    struct Delegate on_start;
-    struct Delegate on_update;
-    struct Delegate on_draw;
-
-    struct Terminal term;
-};
-
 struct CtrlBind {
     enum CtrlCode code;
     u16 bind;
@@ -94,19 +93,18 @@ void *Update(void *args)
 {
     struct Instance *game = args;
 
-    struct TChar4 blks[game->term.area];
-    game->term.blks = blks;
-
     while (true) {
         // Input
         CtrlPoll(&game->ctrl);
+        if (CtrlGet(&game->ctrl, LEFT, KEY)->button.is_down)
+            printf("left down this frame\n");
 
         // Game logic
-        Invoke(&game->on_update, game);
+        //Invoke(&game->on_update, game);
 
         // Draw
-        TermOut(&game->term);
-        puts(game->term.buf);
+        //TermOut(&game->term);
+        //puts(game->term.buf);
     }
 }
 
@@ -128,6 +126,13 @@ bool Start(struct Instance *game)
 
     if (!NewTerm(&game->term, 20, 20))
         return false;
+
+    if (!NewDelegate(&game->on_start, 16))
+        return false;
+    if (!NewDelegate(&game->on_update, 16))
+        return false;
+    if (!NewDelegate(&game->on_draw, 16))
+        return false;
     
     return true;
 }
@@ -135,15 +140,13 @@ bool Start(struct Instance *game)
 int main()
 {
     struct Instance game;
-    Start(&game);
+    if (!Start(&game))
+        exit(1);
 
     #ifdef _WIN32
-    if(!WindowsInit(&game.term)) {
-        printf("FUCK");
+    if(!WindowsInit(&game.term))
         exit(1);
-    }
     #endif
-    printf("does it work");
 
     StartInput(&game.ctrl);
     Loop(&game);

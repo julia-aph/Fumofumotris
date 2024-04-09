@@ -12,21 +12,22 @@
 
 #define IO_BUF_SIZE 16
 
-enum CtrlType {
+enum InputType {
     KEY,
     AXIS,
     JOYSTICK,
     ESCAPE
 };
 
-struct Record {
-    u16 id;
+struct InputRecord {
+    u16 bind;
     u8 type;
 
     union {
         struct {
             bool is_down;
-        } key;
+            bool is_up;
+        } button;
         struct {
             u64 value;
         } axis;
@@ -34,24 +35,25 @@ struct Record {
             u32 x;
             u32 y;
         } joystick;
-    } data;
+    };
 
     struct timespec timestamp;
 };
 
 struct RecordBuffer {
-    struct Record records[IO_BUF_SIZE];
+    struct InputRecord records[IO_BUF_SIZE];
     size_t count;
     pthread_mutex_t mutex;
 };
 
-struct Axis {
+struct InputAxis {
     union {
         struct {
             u32 value;
-            u32 is_down : 1;
-            u32 is_up : 1;
-        } key;
+            bool is_down;
+            bool is_held;
+            bool is_up;
+        } button;
         struct {
             u64 value;
         } axis;
@@ -59,7 +61,7 @@ struct Axis {
             u32 x;
             u32 y;
         } joystick;
-    } data;
+    };
 
     struct timespec last_pressed;
     struct timespec last_released;
@@ -86,7 +88,7 @@ struct ctrl_bkt {
     hashtype hash;
     u16 value;
     u8 type;
-    struct Axis *axis;
+    struct InputAxis *axis;
 };
 
 struct ctrl_dict {
@@ -95,20 +97,21 @@ struct ctrl_dict {
     struct ctrl_bkt *bkts;
 };
 
-struct Ctrl {
+struct Controller {
     struct ctrl_dict codes;
     struct ctrl_dict binds;
+    struct InputAxis *axes;
 
     struct RecordBuffer buf;
     pthread_t thread;
 };
 
-bool NewCtrl(struct Ctrl *ctrl, size_t code_cap, size_t bind_cap);
+bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap);
 
-void FreeCtrl(struct Ctrl *ctrl);
+void FreeCtrl(struct Controller *ctrl);
 
-bool CtrlMap(struct Ctrl *ctrl, u16f code, u16f bind, u8f type);
+bool CtrlMap(struct Controller *ctrl, u16f code, u16f bind, u8f type);
 
-struct Axis *CtrlGet(struct Ctrl *ctrl, u16f code, u8f type);
+struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u8f type);
 
-bool CtrlPoll(struct Ctrl *ctrl);
+bool CtrlPoll(struct Controller *ctrl);

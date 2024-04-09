@@ -11,54 +11,48 @@
 
 #define IO_BUF_SIZE 16
 
-enum CtrlType {
+enum InputType {
     KEY,
     AXIS,
     JOYSTICK,
     ESCAPE
 };
 
-struct Record {
-    u16 id;
+struct Button {
+    u32 value;
+    bool is_down;
+    bool is_held;
+    bool is_up;
+};
+
+struct Axis {
+    i64 value;
+};
+
+struct Joystick {
+    i32 x;
+    i32 y;
+};
+
+struct InputRecord {
+    u16 bind;
     u8 type;
 
     union {
-        struct {
-            bool is_down;
-        } key;
-        struct {
-            u64 value;
-        } axis;
-        struct {
-            u32 x;
-            u32 y;
-        } joystick;
-    } data;
+        struct Button but;
+        struct Axis axis;
+        struct Joystick js;
+    };
 
     struct timespec timestamp;
 };
 
-struct RecordBuffer {
-    struct Record records[IO_BUF_SIZE];
-    size_t count;
-    pthread_mutex_t mutex;
-};
-
-struct Axis {
+struct InputAxis {
     union {
-        struct {
-            u32 value;
-            u32 is_down : 1;
-            u32 is_up : 1;
-        } key;
-        struct {
-            u64 value;
-        } axis;
-        struct {
-            u32 x;
-            u32 y;
-        } joystick;
-    } data;
+        struct Button but;
+        struct Axis axis;
+        struct Joystick js;
+    };
 
     struct timespec last_pressed;
     struct timespec last_released;
@@ -81,41 +75,44 @@ hashtype Hash(void *item, size_t size)
 
 hashtype hash_id(u16f value, u8f type)
 {
-    struct id {
-        u16 id;
-        u8 type;
-    };
-
-    struct id id = { value, type };
-    return Hash(&id, sizeof(struct id));
+    struct { u16 id; u8 type; } id = { value, type };
+    return Hash(&id, sizeof(id));
 }
-
-struct ctrl_bkt {
-    hashtype hash;
-    u16 value;
-    u8 type;
-    struct Axis *axis;
-};
 
 struct ctrl_dict {
     size_t capacity;
     size_t filled;
-    struct ctrl_bkt *bkts;
+
+    struct ctrl_bkt {
+        hashtype hash;
+        u16 value;
+        u8 type;
+
+        struct InputAxis *axis;
+    } *bkts;
 };
 
-struct Ctrl {
+struct Controller {
     struct ctrl_dict codes;
     struct ctrl_dict binds;
+    struct InputAxis *axes;
 
-    struct RecordBuffer buf;
-    pthread_t thread;
+    struct {
+        struct InputRecord records[IO_BUF_SIZE];
+        size_t len;
+    } input_buf;
+
+    struct {
+        size_t indexes[IO_BUF_SIZE];
+        size_t len;
+    } pending_state_buf;
 };
 
-bool NewCtrl(struct Ctrl *ctrl, size_t code_cap, size_t bind_cap)
+bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap)
 {
     struct ctrl_bkt *code_bkts = calloc(code_cap, sizeof(struct ctrl_bkt));
     struct ctrl_bkt *bind_bkts = calloc(bind_cap, sizeof(struct ctrl_bkt));
-    struct Axis *axes = calloc(code_cap, sizeof(struct Axis));
+    struct InputAxis *axes = calloc(code_cap, sizeof(struct InputAxis));
 
     if (code_bkts == nullptr or bind_bkts == nullptr or axes == nullptr)
         return false;
@@ -124,7 +121,7 @@ bool NewCtrl(struct Ctrl *ctrl, size_t code_cap, size_t bind_cap)
         code_bkts[i].axis = axes + i;
     }
 
-    *ctrl = (struct Ctrl) {
+    *ctrl = (struct Controller) {
         .codes = (struct ctrl_dict) {
             .capacity = code_cap,
             .filled = 0,
@@ -135,19 +132,23 @@ bool NewCtrl(struct Ctrl *ctrl, size_t code_cap, size_t bind_cap)
             .filled = 0,
             .bkts = bind_bkts,
         },
+        .axes = axes,
         
-        .buf = (struct RecordBuffer) {
-            .count = 0,
-            .mutex = PTHREAD_MUTEX_INITIALIZER,
+        .input_buf = {
+            .len = 0,
+        },
+        .pending_state_buf = {
+            .len = 0,
         },
     };
     return true;
 }
 
-void FreeCtrl(struct Ctrl *ctrl)
+void FreeCtrl(struct Controller *ctrl)
 {
     free(ctrl->codes.bkts);
     free(ctrl->binds.bkts);
+    free(ctrl->axes);
 }
 
 struct ctrl_bkt *get_bkt(struct ctrl_dict *dict, size_t i)
@@ -216,7 +217,7 @@ next:
     return nullptr;
 }
 
-struct Axis *find_axis(struct ctrl_dict *dict, u16f value, u8f type)
+struct InputAxis *find_axis(struct ctrl_dict *dict, u16f value, u8f type)
 {
     struct ctrl_bkt *bkt = find(dict, value, type);
     if (bkt == nullptr)
@@ -225,7 +226,7 @@ struct Axis *find_axis(struct ctrl_dict *dict, u16f value, u8f type)
     return bkt->axis;
 }
 
-bool CtrlMap(struct Ctrl *ctrl, u16f code, u16f bind, u8f type)
+bool CtrlMap(struct Controller *ctrl, u16f code, u16f bind, u8f type)
 {
     if (ctrl->codes.filled >= ctrl->codes.capacity or ctrl->binds.filled >= ctrl->binds.capacity) {
         printf("fatal error");
@@ -245,7 +246,7 @@ bool CtrlMap(struct Ctrl *ctrl, u16f code, u16f bind, u8f type)
     return true;
 }
 
-struct Axis *CtrlGet(struct Ctrl *ctrl, u16f code, u8f type)
+struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u8f type)
 {
     struct ctrl_bkt *code_bkt = find(&ctrl->codes, code, type);
     if (code_bkt == nullptr)
@@ -254,53 +255,69 @@ struct Axis *CtrlGet(struct Ctrl *ctrl, u16f code, u8f type)
     return code_bkt->axis;
 }
 
-void update_key(struct Axis *axis, struct Record *record)
+void update_key(struct InputAxis *axis, struct InputRecord *rec)
 {
-    if (record->data.key.is_down)
-        axis->last_pressed = record->timestamp;
-    else
-        axis->last_released = record->timestamp;
-
-    axis->data.key.is_down = record->data.key.is_down;
+    if (rec->but.is_down) {
+        axis->last_pressed = rec->timestamp;
+        axis->but.is_held = true;
+    } else {
+        axis->last_released = rec->timestamp;
+        axis->but.is_held = false;
+    }
+    
+    axis->but.is_down |= rec->but.is_down;
+    axis->but.is_up |= rec->but.is_up;
 }
 
-void update_axis(struct Axis *axis, struct Record *record)
+void update_axis(struct InputAxis *axis, struct InputRecord *rec)
 {
-    axis->data.axis.value = record->data.axis.value;
-    axis->last_pressed = record->timestamp;
+    axis->axis.value = rec->axis.value;
+
+    axis->last_pressed = rec->timestamp;
 }
 
-void update_joystick(struct Axis *axis, struct Record *record)
+void update_joystick(struct InputAxis *axis, struct InputRecord *rec)
 {
-    axis->data.joystick.x = record->data.joystick.x;
-    axis->data.joystick.y = record->data.joystick.y;
-    axis->last_pressed = record->timestamp;
+    axis->js.x = rec->js.x;
+    axis->js.y = rec->js.y;
+
+    axis->last_pressed = rec->timestamp;
 }
 
-bool CtrlPoll(struct Ctrl *ctrl)
+bool dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
 {
-    for (size_t i = 0; i < ctrl->buf.count; i++) {
-        struct Record *rec = &ctrl->buf.records[i];
+    switch (rec->type) {
+    case KEY:
+        update_key(axis, rec);
+        printf("axis:%hu\n", axis->but.is_down);
+        return true;
 
-        struct Axis *axis = find_axis(&ctrl->binds, rec->id, rec->type);
+    case AXIS:
+        update_axis(axis, rec);
+        return true;
+        
+    case JOYSTICK:
+        update_joystick(axis, rec);
+        return true;
+    }
+
+    return false;
+}
+
+bool CtrlPoll(struct Controller *ctrl)
+{
+    for (size_t i = 0; i < ctrl->input_buf.len; i++) {
+        struct InputRecord *rec = &ctrl->input_buf.records[i];
+        printf("i:%hu\n", rec->bind);
+
+        struct InputAxis *axis = find_axis(&ctrl->binds, rec->bind, rec->type);
         if (axis == nullptr)
             continue;
 
-        switch (rec->type) {
-        case KEY:
-            update_key(axis, rec);
-            break;
-        case AXIS:
-            update_axis(axis, rec);
-            break;
-        case JOYSTICK:
-            update_joystick(axis, rec);
-            break;
-        default:
+        if (!dispatch_update(axis, rec))
             return false;
-        }
     }
 
-    ctrl->buf.count = 0;
+    ctrl->input_buf.len = 0;
     return true;
 }

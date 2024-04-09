@@ -13,7 +13,7 @@ struct Delegate {
     void (**events)(void *args);
 };
 
-struct Delegate NewDelegate(size_t capacity);
+bool NewDelegate(struct Delegate *d, size_t capacity);
 
 void Subscribe(struct Delegate *d, void (*event)(void *args));
 
