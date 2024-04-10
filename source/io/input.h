@@ -8,6 +8,13 @@
 #include "ctrl.h"
 #include "fumotris.h"
 
-void StartInput(struct Controller *ctrl);
+struct Input {
+    struct Controller ctrl;
 
-void JoinInput(struct Controller *ctrl);
+    pthread_t thread;
+    pthread_mutex_t access_mutex;
+};
+
+bool StartInput(struct Input *in);
+
+bool JoinInput(struct Input *in);

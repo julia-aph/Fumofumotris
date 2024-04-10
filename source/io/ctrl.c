@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "fumotris.h"
+#include "hash.h"
 
 #define IO_BUF_SIZE 16
 
@@ -19,24 +20,23 @@ enum InputType {
 };
 
 struct Button {
-    u32 value;
-    bool is_down;
-    bool is_held;
-    bool is_up;
-};
-
+    u64 value;
+} but;
 struct Axis {
     i64 value;
-};
-
+} axis;
 struct Joystick {
     i32 x;
     i32 y;
-};
+} js;
 
 struct InputRecord {
-    u16 bind;
+    u16f bind;
+    
     u8 type;
+    u8 is_down;
+    u8 is_held;
+    u8 is_up;
 
     union {
         struct Button but;
@@ -48,38 +48,11 @@ struct InputRecord {
 };
 
 struct InputAxis {
-    u8 type;
-    
-    union {
-        struct Button but;
-        struct Axis axis;
-        struct Joystick js;
-    };
+    struct input;
 
     struct timespec last_pressed;
     struct timespec last_released;
 };
-
-typedef u32 hashtype;
-hashtype Hash(void *item, size_t size)
-{
-    u8 *data = (u8 *)item;
-
-    u32 h = 98317;
-    for (size_t i = 0; i < size; i++) {
-        h ^= data[i];
-        h *= 0x5bd1e995;
-        h ^= h >> 15;
-    }
-
-    return h;
-}
-
-hashtype hash_id(u16f value, u8f type)
-{
-    struct { u16 id; u8 type; } id = { value, type };
-    return Hash(&id, sizeof(id));
-}
 
 struct ctrl_dict {
     size_t capacity;
@@ -99,9 +72,10 @@ struct Controller {
     struct ctrl_dict binds;
     struct InputAxis *axes;
 
-    struct {
+    struct InputBuffer {
         struct InputRecord records[IO_BUF_SIZE];
         size_t len;
+        size_t start;
     } input_buf;
 
     struct {
@@ -138,6 +112,7 @@ bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap)
         
         .input_buf = {
             .len = 0,
+            .start = 0,
         },
         .pending_buf = {
             .len = 0,
@@ -168,6 +143,12 @@ void set_bkt(struct ctrl_bkt *bkt, hashtype hash, u16f value, u8f type)
 size_t wrap_index(size_t i, size_t max)
 {
     return i % (SIZE_MAX - max + 1);
+}
+
+hashtype hash_id(u16f value, u8f type)
+{
+    struct { u16 id; u8 type; } id = { value, type };
+    return Hash(&id, sizeof(id));
 }
 
 bool find_or_set(struct ctrl_dict *dict, struct ctrl_bkt **out, u16f value, u8f type)

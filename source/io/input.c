@@ -12,32 +12,45 @@
 #include "win.h"
 #endif
 
+struct Input {
+    struct Controller ctrl;
+
+    pthread_t thread;
+    pthread_mutex_t access_mutex;
+};
+
+struct InputRecord *get_at(struct InputBuffer *buf, size_t i)
+{
+    return &buf->records[(buf->start + i) % IO_BUF_SIZE];
+}
+
 void *block_input(void *args_ptr)
 {
-    struct RecordBuffer *rec_buf = args_ptr;
+    struct Input *in = args_ptr;
+    struct InputBuffer tmp_buf = { .len = 0 };
 
     while (true) {
-        bool success;
-
         #ifdef _WIN32
-        success = WindowsBlockInput(rec_buf);
+        if (!WindowsReadInputBuffer(&tmp_buf))
+            return false;
         #endif
-        
-        if (!success) {
-            printf("winfail");
-            exit(1);
+
+        pthread_mutex_lock(&in->access_mutex);
+        for (size_t i = 0; i < tmp_buf.len; i++) {
+            *get_at(&in->ctrl.input_buf, i) = *get_at();
         }
+        pthread_mutex_unlock(&in->access_mutex);
     }
 
     return nullptr;
 }
 
-void StartInput(struct Controller *ctrl)
+bool StartInput(struct Input *in)
 {
-    pthread_create(&ctrl->thread, nullptr, block_input, &ctrl->buf);
+    return pthread_create(&in->thread, nullptr, block_input, in) == 0;
 }
 
-void JoinInput(struct Controller *ctrl)
+bool JoinInput(struct Input *in)
 {
-    pthread_join(ctrl->thread, nullptr);
+    return pthread_join(in->thread, nullptr) == 0;
 }

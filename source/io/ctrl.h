@@ -94,9 +94,10 @@ struct Controller {
     struct ctrl_dict binds;
     struct InputAxis *axes;
 
-    struct {
+    struct InputBuffer {
         struct InputRecord records[IO_BUF_SIZE];
         size_t len;
+        size_t start;
     } input_buf;
 
     struct {

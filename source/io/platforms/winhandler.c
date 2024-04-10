@@ -67,8 +67,8 @@ void set_key_record(struct InputRecord *rec, KEY_EVENT_RECORD win_key)
     rec->type = KEY;
     rec->bind = win_key.wVirtualKeyCode;
 
-    rec->button.is_down = win_key.bKeyDown;
-    rec->button.is_up = !win_key.bKeyDown;
+    rec->but.is_down = win_key.bKeyDown;
+    rec->but.is_up = !win_key.bKeyDown;
 
     if (win_key.wVirtualKeyCode == VK_ESCAPE)
         rec->type = ESCAPE;
@@ -90,8 +90,8 @@ bool set_mouse_record(struct InputRecord *rec, MOUSE_EVENT_RECORD win_mouse)
     case MOUSE_MOVED:
         rec->type = JOYSTICK;
         rec->bind = 0;
-        rec->joystick.x = win_mouse.dwMousePosition.X;
-        rec->joystick.y = win_mouse.dwMousePosition.Y;
+        rec->js.x = win_mouse.dwMousePosition.X;
+        rec->js.y = win_mouse.dwMousePosition.Y;
         break;
     default:
         return false;
@@ -116,9 +116,9 @@ bool dispatch_record(struct InputRecord *rec, INPUT_RECORD win_rec)
     return true;
 }
 
-bool WinBlockInput(struct RecordBuffer *buf)
+bool WinBlockInput(struct Controller *ctrl)
 {
-    size_t win_size = IO_BUF_SIZE - buf->count;
+    size_t win_size = IO_BUF_SIZE - ctrl->input_buf.len;
     INPUT_RECORD win_buf[win_size];
     DWORD count;
 
