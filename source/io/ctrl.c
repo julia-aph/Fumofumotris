@@ -48,6 +48,8 @@ struct InputRecord {
 };
 
 struct InputAxis {
+    u8 type;
+    
     union {
         struct Button but;
         struct Axis axis;
@@ -105,7 +107,7 @@ struct Controller {
     struct {
         size_t indexes[IO_BUF_SIZE];
         size_t len;
-    } pending_state_buf;
+    } pending_buf;
 };
 
 bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap)
@@ -137,7 +139,7 @@ bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap)
         .input_buf = {
             .len = 0,
         },
-        .pending_state_buf = {
+        .pending_buf = {
             .len = 0,
         },
     };
@@ -243,6 +245,7 @@ bool CtrlMap(struct Controller *ctrl, u16f code, u16f bind, u8f type)
         return false;
     
     bind_bkt->axis = code_bkt->axis;
+    code_bkt->axis->type = type;
     return true;
 }
 
@@ -306,6 +309,10 @@ bool dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
 
 bool CtrlPoll(struct Controller *ctrl)
 {
+    for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
+
+    }
+
     for (size_t i = 0; i < ctrl->input_buf.len; i++) {
         struct InputRecord *rec = &ctrl->input_buf.records[i];
         printf("i:%hu\n", rec->bind);

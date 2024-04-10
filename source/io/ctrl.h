@@ -19,48 +19,40 @@ enum InputType {
     ESCAPE
 };
 
+struct Button {
+    u32 value;
+    bool is_down;
+    bool is_held;
+    bool is_up;
+};
+
+struct Axis {
+    i64 value;
+};
+
+struct Joystick {
+    i32 x;
+    i32 y;
+};
+
 struct InputRecord {
     u16 bind;
     u8 type;
 
     union {
-        struct {
-            bool is_down;
-            bool is_up;
-        } button;
-        struct {
-            u64 value;
-        } axis;
-        struct {
-            u32 x;
-            u32 y;
-        } joystick;
+        struct Button but;
+        struct Axis axis;
+        struct Joystick js;
     };
 
     struct timespec timestamp;
 };
 
-struct RecordBuffer {
-    struct InputRecord records[IO_BUF_SIZE];
-    size_t count;
-    pthread_mutex_t mutex;
-};
-
 struct InputAxis {
     union {
-        struct {
-            u32 value;
-            bool is_down;
-            bool is_held;
-            bool is_up;
-        } button;
-        struct {
-            u64 value;
-        } axis;
-        struct {
-            u32 x;
-            u32 y;
-        } joystick;
+        struct Button but;
+        struct Axis axis;
+        struct Joystick js;
     };
 
     struct timespec last_pressed;
@@ -84,17 +76,17 @@ enum CtrlCode {
 
 typedef u32 hashtype;
 
-struct ctrl_bkt {
-    hashtype hash;
-    u16 value;
-    u8 type;
-    struct InputAxis *axis;
-};
-
 struct ctrl_dict {
     size_t capacity;
     size_t filled;
-    struct ctrl_bkt *bkts;
+
+    struct ctrl_bkt {
+        hashtype hash;
+        u16 value;
+        u8 type;
+
+        struct InputAxis *axis;
+    } *bkts;
 };
 
 struct Controller {
@@ -102,8 +94,15 @@ struct Controller {
     struct ctrl_dict binds;
     struct InputAxis *axes;
 
-    struct RecordBuffer buf;
-    pthread_t thread;
+    struct {
+        struct InputRecord records[IO_BUF_SIZE];
+        size_t len;
+    } input_buf;
+
+    struct {
+        size_t indexes[IO_BUF_SIZE];
+        size_t len;
+    } pending_buf;
 };
 
 bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap);
