@@ -19,37 +19,36 @@ enum InputType {
     ESCAPE
 };
 
-struct Button {
-    u64 value;
-} but;
-struct Axis {
-    i64 value;
-} axis;
-struct Joystick {
-    i32 x;
-    i32 y;
-} js;
-
-struct InputRecord {
-    u16f bind;
-    
+struct Input {
     u8 type;
     u8 is_down;
     u8 is_held;
     u8 is_up;
 
     union {
-        struct Button but;
-        struct Axis axis;
-        struct Joystick js;
+        struct Button {
+            u64 value;
+        } but;
+        struct Axis {
+            i64 value;
+        } axis;
+        struct Joystick {
+            i32 x;
+            i32 y;
+        } js;
     };
+};
+
+struct InputRecord {
+    u16f bind;
+    struct Input dat;
 
     struct timespec timestamp;
 };
 
 struct InputAxis {
-    struct input;
-
+    struct Input dat;
+    
     struct timespec last_pressed;
     struct timespec last_released;
 };
