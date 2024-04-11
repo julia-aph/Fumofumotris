@@ -13,44 +13,60 @@
 #define IO_BUF_SIZE 16
 
 enum InputType {
-    KEY,
+    BUTTON,
     AXIS,
     JOYSTICK,
     ESCAPE
 };
 
-struct Input {
+struct Button {
+    u64 value;
+};
+struct Axis {
+    i64 value;
+};
+struct Joystick {
+    i32 x;
+    i32 y;
+};
+union InputData {
+    struct Button input_but;
+    struct Axis input_axis;
+    struct Joystick input_js;
+};
+
+struct InputRecord {
+    u16f bind;
+    struct timespec timestamp;
+
     u8 type;
     u8 is_down;
     u8 is_held;
     u8 is_up;
 
     union {
-        struct Button {
-            u64 value;
-        } but;
-        struct Axis {
-            i64 value;
-        } axis;
-        struct Joystick {
-            i32 x;
-            i32 y;
-        } js;
+        struct Button but;
+        struct Axis axis;
+        struct Joystick js;
+        union InputData data;
     };
 };
 
-struct InputRecord {
-    u16f bind;
-    struct Input dat;
-
-    struct timespec timestamp;
-};
-
 struct InputAxis {
-    struct Input dat;
-    
     struct timespec last_pressed;
     struct timespec last_released;
+
+    u8 type;
+    u8 is_down;
+    u8 is_held;
+    u8 is_up;
+
+    union {
+        struct Button but;
+        struct Axis axis;
+        struct Joystick js;
+        union InputData data;
+    };
 };
 
 struct ctrl_dict {
@@ -66,20 +82,21 @@ struct ctrl_dict {
     } *bkts;
 };
 
+struct InputBuffer {
+    size_t len;
+    struct InputRecord records[IO_BUF_SIZE];
+};
+
 struct Controller {
     struct ctrl_dict codes;
     struct ctrl_dict binds;
     struct InputAxis *axes;
 
-    struct InputBuffer {
-        struct InputRecord records[IO_BUF_SIZE];
-        size_t len;
-        size_t start;
-    } input_buf;
+    struct InputBuffer input_buf;
 
     struct {
-        size_t indexes[IO_BUF_SIZE];
         size_t len;
+        struct InputAxis *axes[IO_BUF_SIZE];
     } pending_buf;
 };
 
@@ -109,13 +126,8 @@ bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap)
         },
         .axes = axes,
         
-        .input_buf = {
-            .len = 0,
-            .start = 0,
-        },
-        .pending_buf = {
-            .len = 0,
-        },
+        .input_buf.len = 0,
+        .pending_buf.len = 0,
     };
     return true;
 }
@@ -238,73 +250,67 @@ struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u8f type)
     return code_bkt->axis;
 }
 
-void update_key(struct InputAxis *axis, struct InputRecord *rec)
+void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
 {
-    if (rec->but.is_down) {
+    if (rec->is_down and !axis->is_held) {
+        axis->is_down = true;
+        axis->is_held = true;
         axis->last_pressed = rec->timestamp;
-        axis->but.is_held = true;
-    } else {
+    } else if (rec->is_up) {
+        axis->is_up = true;
+        axis->is_held = false;
         axis->last_released = rec->timestamp;
-        axis->but.is_held = false;
-    }
-    
-    axis->but.is_down |= rec->but.is_down;
-    axis->but.is_up |= rec->but.is_up;
-}
-
-void update_axis(struct InputAxis *axis, struct InputRecord *rec)
-{
-    axis->axis.value = rec->axis.value;
-
-    axis->last_pressed = rec->timestamp;
-}
-
-void update_joystick(struct InputAxis *axis, struct InputRecord *rec)
-{
-    axis->js.x = rec->js.x;
-    axis->js.y = rec->js.y;
-
-    axis->last_pressed = rec->timestamp;
-}
-
-bool dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
-{
-    switch (rec->type) {
-    case KEY:
-        update_key(axis, rec);
-        printf("axis:%hu\n", axis->but.is_down);
-        return true;
-
-    case AXIS:
-        update_axis(axis, rec);
-        return true;
-        
-    case JOYSTICK:
-        update_joystick(axis, rec);
-        return true;
     }
 
-    return false;
+    axis->data = rec->data;
 }
 
 bool CtrlPoll(struct Controller *ctrl)
 {
     for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
+        struct InputAxis *axis = ctrl->pending_buf.axes[i];
 
+        axis->is_up = false;
+        axis->is_down = false;
     }
+    ctrl->pending_buf.len = ctrl->input_buf.len;
 
     for (size_t i = 0; i < ctrl->input_buf.len; i++) {
         struct InputRecord *rec = &ctrl->input_buf.records[i];
-        printf("i:%hu\n", rec->bind);
-
         struct InputAxis *axis = find_axis(&ctrl->binds, rec->bind, rec->type);
+
         if (axis == nullptr)
             continue;
 
-        if (!dispatch_update(axis, rec))
-            return false;
-    }
+        dispatch_update(axis, rec);
 
+        ctrl->pending_buf.axes[i] = axis;
+    }
     ctrl->input_buf.len = 0;
+
     return true;
+}
+
+int main() 
+{
+    struct Controller ctrl;
+    if (!NewCtrl(&ctrl, 3, 3))
+        return 1;
+
+    CtrlMap(&ctrl, 123, 111, BUTTON);
+    
+    ctrl.input_buf.records[ctrl.input_buf.len++] = (struct InputRecord) {
+        .bind = 111,
+        .type = BUTTON,
+        .is_down = true,
+        .but.value = 69
+    };
+
+    CtrlPoll(&ctrl);
+
+    struct InputAxis *a = CtrlGet(&ctrl, 123, BUTTON);
+    printf("%u\n", a->but.value);
+
+    printf("success");
+    return 0;
 }

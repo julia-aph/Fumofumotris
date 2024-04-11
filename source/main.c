@@ -75,15 +75,15 @@ struct CtrlBind {
 
 const size_t code_count = 12;
 const struct CtrlBind ctrl_binds[12] = {
-    { LEFT, 0x25, KEY },
-    { RIGHT, 0x27, KEY },
-    { SOFT_DROP, 0x28, KEY },
-    { HARD_DROP, 0x20, KEY },
-    { ROTATE_CCW, 'Z', KEY },
-    { ROTATE_CW, 'X', KEY },
-    { ROTATE_180, 'A', KEY },
-    { SWAP, 'C', KEY },
-    { ESC, 0x1B, KEY },
+    { LEFT, 0x25, BUTTON },
+    { RIGHT, 0x27, BUTTON },
+    { SOFT_DROP, 0x28, BUTTON },
+    { HARD_DROP, 0x20, BUTTON },
+    { ROTATE_CCW, 'Z', BUTTON },
+    { ROTATE_CW, 'X', BUTTON },
+    { ROTATE_180, 'A', BUTTON },
+    { SWAP, 'C', BUTTON },
+    { ESC, 0x1B, BUTTON },
     { VSCROLL, 0, AXIS },
     { HSCROLL, 1, AXIS },
     { MOUSE, 0, JOYSTICK }
@@ -96,7 +96,7 @@ void *Update(void *args)
     while (true) {
         // Input
         CtrlPoll(&game->ctrl);
-        if (CtrlGet(&game->ctrl, LEFT, KEY)->button.is_down)
+        if (CtrlGet(&game->ctrl, LEFT, BUTTON)->button.is_down)
             printf("left down this frame\n");
 
         // Game logic

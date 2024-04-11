@@ -1,16 +1,18 @@
 #pragma once
-#include <pthread.h>
 #include <iso646.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
-#include "input.h"
+#include "fumotris.h"
 #include "term.h"
 
-bool WindowsInit(struct Terminal *term);
+typedef struct Windows *platform;
 
-bool WindowsBlockInput(struct RecordBuffer *buf);
+bool WindowsInit(platform win, struct Terminal *term);
 
-bool WindowsWait(double seconds);
+bool WinBlockInput(platform win, struct InputBuffer *buf);
+
+bool WinWait(platform win, struct timespec relative);

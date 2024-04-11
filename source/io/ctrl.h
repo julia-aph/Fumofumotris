@@ -9,54 +9,65 @@
 #include <time.h>
 
 #include "fumotris.h"
+#include "hash.h"
 
 #define IO_BUF_SIZE 16
 
 enum InputType {
-    KEY,
+    BUTTON,
     AXIS,
     JOYSTICK,
     ESCAPE
 };
 
 struct Button {
-    u32 value;
-    bool is_down;
-    bool is_held;
-    bool is_up;
+    u64 value;
 };
-
 struct Axis {
     i64 value;
 };
-
 struct Joystick {
     i32 x;
     i32 y;
 };
+union InputData {
+    struct Button input_but;
+    struct Axis input_axis;
+    struct Joystick input_js;
+};
 
 struct InputRecord {
-    u16 bind;
+    u16f bind;
+    struct timespec timestamp;
+
     u8 type;
+    u8 is_down;
+    u8 is_held;
+    u8 is_up;
 
     union {
         struct Button but;
         struct Axis axis;
         struct Joystick js;
+        union InputData data;
     };
-
-    struct timespec timestamp;
 };
 
 struct InputAxis {
+    struct timespec last_pressed;
+    struct timespec last_released;
+
+    u8 type;
+    u8 is_down;
+    u8 is_held;
+    u8 is_up;
+
     union {
         struct Button but;
         struct Axis axis;
         struct Joystick js;
+        union InputData data;
     };
-
-    struct timespec last_pressed;
-    struct timespec last_released;
 };
 
 enum CtrlCode {
@@ -74,8 +85,6 @@ enum CtrlCode {
     MOUSE
 };
 
-typedef u32 hashtype;
-
 struct ctrl_dict {
     size_t capacity;
     size_t filled;
@@ -89,20 +98,21 @@ struct ctrl_dict {
     } *bkts;
 };
 
+struct InputBuffer {
+    size_t len;
+    struct InputRecord records[IO_BUF_SIZE];
+};
+
 struct Controller {
     struct ctrl_dict codes;
     struct ctrl_dict binds;
     struct InputAxis *axes;
 
-    struct InputBuffer {
-        struct InputRecord records[IO_BUF_SIZE];
-        size_t len;
-        size_t start;
-    } input_buf;
+    struct InputBuffer input_buf;
 
     struct {
-        size_t indexes[IO_BUF_SIZE];
         size_t len;
+        struct InputAxis *axes[IO_BUF_SIZE];
     } pending_buf;
 };
 

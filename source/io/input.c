@@ -19,11 +19,6 @@ struct Input {
     pthread_mutex_t access_mutex;
 };
 
-struct InputRecord *get_at(struct InputBuffer *buf, size_t i)
-{
-    return &buf->records[(buf->start + i) % IO_BUF_SIZE];
-}
-
 void *block_input(void *args_ptr)
 {
     struct Input *in = args_ptr;
