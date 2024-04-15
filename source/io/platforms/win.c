@@ -8,45 +8,53 @@
 
 #include "fumotris.h"
 #include "ctrl.h"
-#include "term.h"
 
-struct Windows {
+static struct Windows {
     HANDLE in_handle;
     HANDLE timer;
     DWORD in_len;
     INPUT_RECORD in_buf[IO_BUF_SIZE];
-};
+} win;
 
-typedef struct Windows *platform;
-
-bool WinInitHandles(struct Windows *win)
+bool init_handles()
 {
-    win->in_handle = GetStdHandle(STD_INPUT_HANDLE);
-    if (win->in_handle == INVALID_HANDLE_VALUE)
+    win.in_handle = GetStdHandle(STD_INPUT_HANDLE);
+    if (win.in_handle == INVALID_HANDLE_VALUE)
         return false;
 
-    win->timer = CreateWaitableTimer(
+    win.timer = CreateWaitableTimer(
         NULL,                       // Timer attributes
         TRUE,                       // Manual reset
         NULL                        // Name
     );
-    if (win->timer == NULL)
+    if (win.timer == NULL)
         return false;
 
     return true;
 }
 
-bool WinInitConsole(struct Windows *win)
+bool init_console()
 {
     DWORD mode = ENABLE_EXTENDED_FLAGS
         | ENABLE_PROCESSED_INPUT
         | ENABLE_PROCESSED_OUTPUT
         | ENABLE_MOUSE_INPUT
         | ENABLE_WINDOW_INPUT;
-    return SetConsoleMode(win->in_handle, mode) != 0;
+    return SetConsoleMode(win.in_handle, mode) != 0;
 }
 
-bool WinGetRefreshRate(u16f *out)
+bool PlatformInit()
+{
+    if (!init_handles())
+        return false;
+
+    if (!init_console())
+        return false;
+
+    return true;
+}
+
+bool PlatformGetRefreshRate(u16f *out)
 {
     DEVMODE mode;
     mode.dmSize = sizeof(DEVMODE);
@@ -60,20 +68,6 @@ bool WinGetRefreshRate(u16f *out)
         return false;
 
     *out = mode.dmDisplayFrequency;
-    return true;
-}
-
-bool WindowsInit(platform win, struct Terminal *term)
-{
-    if (!WinInitHandles(win))
-        return false;
-
-    if (!WinInitConsole(win))
-        return false;
-
-    if (!WinGetRefreshRate(&term->refresh_rate))
-        return false;
-
     return true;
 }
 
@@ -130,23 +124,23 @@ bool read_rec(struct InputRecord *rec, INPUT_RECORD win_rec)
     return false;
 }
 
-bool WinBlockInput(platform win, struct InputBuffer *buf)
+bool PlatformBlockInput(struct InputBuffer *buf)
 {
     if (!ReadConsoleInput(
-        win->in_handle,              // Input handle
-        win->in_buf + buf->len,      // Record buffer
+        win.in_handle,              // Input handle
+        win.in_buf + buf->len,      // Record buffer
         IO_BUF_SIZE - buf->len,     // Record buffer length
-        &win->in_len                 // Out number of records
+        &win.in_len                 // Out number of records
     ))
         return false;
     
     struct timespec now;
     timespec_get(&now, TIME_UTC);
 
-    for (size_t i = 0; i < win->in_len; i++) {
+    for (size_t i = 0; i < win.in_len; i++) {
         struct InputRecord *rec = &buf->records[buf->len];
 
-        if (!read_rec(rec, win->in_buf[i]))
+        if (!read_rec(rec, win.in_buf[i]))
             continue;
 
         rec->timestamp = now;
@@ -156,13 +150,13 @@ bool WinBlockInput(platform win, struct InputBuffer *buf)
     return true;
 }
 
-bool WinWait(platform win, struct timespec relative)
+bool PlatformWait(struct timespec relative)
 {
     LARGE_INTEGER duration;
     duration.QuadPart = -10000000 * relative.tv_sec - relative.tv_nsec / 100;
 
     if (!SetWaitableTimer(
-        win->timer,                 // Timer
+        win.timer,                 // Timer
         &duration,                  // Duration
         0,                          // Period
         NULL,                       // Completion coroutine
@@ -171,7 +165,7 @@ bool WinWait(platform win, struct timespec relative)
     ))
         return false;
 
-    DWORD result = WaitForSingleObject(win->timer, INFINITE);
+    DWORD result = WaitForSingleObject(win.timer, INFINITE);
     if (result != WAIT_OBJECT_0)
         return false;
     

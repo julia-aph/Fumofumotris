@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "control.h"
+#include "ctrl.h"
 #include "fumotris.h"
 #include "term.h"
 #include "tetr.h"
@@ -96,7 +96,7 @@ void *Update(void *args)
     while (true) {
         // Input
         CtrlPoll(&game->ctrl);
-        if (CtrlGet(&game->ctrl, LEFT, BUTTON)->button.is_down)
+        if (CtrlGet(&game->ctrl, LEFT, BUTTON)->is_down)
             printf("left down this frame\n");
 
         // Game logic
@@ -143,10 +143,8 @@ int main()
     if (!Start(&game))
         exit(1);
 
-    #ifdef _WIN32
-    if(!WindowsInit(&game.term))
+    if(!PlatformInit(&game.term))
         exit(1);
-    #endif
 
     StartInput(&game.ctrl);
     Loop(&game);

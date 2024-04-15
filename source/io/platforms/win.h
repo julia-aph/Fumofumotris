@@ -7,12 +7,11 @@
 #include <time.h>
 
 #include "fumotris.h"
-#include "term.h"
 
-typedef struct Windows *platform;
+bool PlatformInit();
 
-bool WindowsInit(platform win, struct Terminal *term);
+bool PlatformGetRefreshRate(u16f *out);
 
-bool WinBlockInput(platform win, struct InputBuffer *buf);
+bool PlatformBlockInput(struct InputBuffer *buf);
 
-bool WinWait(platform win, struct timespec relative);
+bool PlatformWait(struct timespec relative);

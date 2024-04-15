@@ -25,14 +25,12 @@ void *block_input(void *args_ptr)
     struct InputBuffer tmp_buf = { .len = 0 };
 
     while (true) {
-        #ifdef _WIN32
-        if (!WindowsReadInputBuffer(&tmp_buf))
+        if (!PlatformBlockInput(&tmp_buf))
             return false;
-        #endif
 
         pthread_mutex_lock(&in->access_mutex);
-        for (size_t i = 0; i < tmp_buf.len; i++) {
-            *get_at(&in->ctrl.input_buf, i) = *get_at();
+        {
+            
         }
         pthread_mutex_unlock(&in->access_mutex);
     }
