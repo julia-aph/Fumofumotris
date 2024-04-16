@@ -12,7 +12,7 @@ struct Input {
     struct Controller ctrl;
 
     pthread_t thread;
-    pthread_mutex_t access_mutex;
+    pthread_mutex_t mutex;
 };
 
 bool StartInput(struct Input *in);

@@ -53,7 +53,17 @@ struct InputRecord {
     };
 };
 
-struct InputAxis {
+struct InputBuffer {
+    size_t len;
+    size_t start;
+    struct InputRecord records[IO_BUF_SIZE];
+};
+
+void InputBufferTransfer(struct InputBuffer *tmp, struct InputBuffer *dest);
+
+void InputBufferCopy(struct InputBuffer *buf, struct InputRecord *src);
+
+struct CtrlAxis {
     struct timespec last_pressed;
     struct timespec last_released;
 
@@ -94,25 +104,20 @@ struct ctrl_dict {
         u16 value;
         u8 type;
 
-        struct InputAxis *axis;
+        struct CtrlAxis *axis;
     } *bkts;
-};
-
-struct InputBuffer {
-    size_t len;
-    struct InputRecord records[IO_BUF_SIZE];
 };
 
 struct Controller {
     struct ctrl_dict codes;
     struct ctrl_dict binds;
-    struct InputAxis *axes;
+    struct CtrlAxis *axes;
 
     struct InputBuffer input_buf;
 
     struct {
         size_t len;
-        struct InputAxis *axes[IO_BUF_SIZE];
+        struct CtrlAxis *axes[IO_BUF_SIZE];
     } pending_buf;
 };
 
@@ -122,6 +127,6 @@ void FreeCtrl(struct Controller *ctrl);
 
 bool CtrlMap(struct Controller *ctrl, u16f code, u16f bind, u8f type);
 
-struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u8f type);
+struct CtrlAxis *CtrlGet(struct Controller *ctrl, u16f code, u8f type);
 
 bool CtrlPoll(struct Controller *ctrl);

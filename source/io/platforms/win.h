@@ -12,6 +12,6 @@ bool PlatformInit();
 
 bool PlatformGetRefreshRate(u16f *out);
 
-bool PlatformBlockInput(struct InputBuffer *buf);
+bool PlatformReadInput(struct InputBuffer *buf);
 
 bool PlatformWait(struct timespec relative);

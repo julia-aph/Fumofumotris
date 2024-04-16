@@ -1,6 +1,6 @@
 #pragma once
 #include <stdbool.h>
 
-double GetTime();
+struct timespec TimeNow();
 
-bool Wait(double seconds);
+double TimeNowDouble();

@@ -4,22 +4,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
-#include <time.h>
 
 #include "fumotris.h"
 #include "ctrl.h"
+#include "gametime.h"
 
 static struct Windows {
-    HANDLE in_handle;
     HANDLE timer;
-    DWORD in_len;
-    INPUT_RECORD in_buf[IO_BUF_SIZE];
+    HANDLE input_handle;
+    DWORD input_n;
+    INPUT_RECORD input_buf[IO_BUF_SIZE];
 } win;
 
 bool init_handles()
 {
-    win.in_handle = GetStdHandle(STD_INPUT_HANDLE);
-    if (win.in_handle == INVALID_HANDLE_VALUE)
+    win.input_handle = GetStdHandle(STD_INPUT_HANDLE);
+    if (win.input_handle == INVALID_HANDLE_VALUE)
         return false;
 
     win.timer = CreateWaitableTimer(
@@ -40,7 +40,7 @@ bool init_console()
         | ENABLE_PROCESSED_OUTPUT
         | ENABLE_MOUSE_INPUT
         | ENABLE_WINDOW_INPUT;
-    return SetConsoleMode(win.in_handle, mode) != 0;
+    return SetConsoleMode(win.input_handle, mode) != 0;
 }
 
 bool PlatformInit()
@@ -124,27 +124,23 @@ bool read_rec(struct InputRecord *rec, INPUT_RECORD win_rec)
     return false;
 }
 
-bool PlatformBlockInput(struct InputBuffer *buf)
+bool PlatformReadInput(struct InputBuffer *tmp)
 {
     if (!ReadConsoleInput(
-        win.in_handle,              // Input handle
-        win.in_buf + buf->len,      // Record buffer
-        IO_BUF_SIZE - buf->len,     // Record buffer length
-        &win.in_len                 // Out number of records
+        win.input_handle,           // Input handle
+        &win.input_buf[tmp->len],   // Record buffer
+        IO_BUF_SIZE - tmp->len,     // Record buffer length
+        &win.input_n                // Out number of records
     ))
         return false;
-    
-    struct timespec now;
-    timespec_get(&now, TIME_UTC);
 
-    for (size_t i = 0; i < win.in_len; i++) {
-        struct InputRecord *rec = &buf->records[buf->len];
+    struct InputRecord rec = { .timestamp = TimeNow() };
+    for (size_t i = 0; i < win.input_n; i++) {
 
-        if (!read_rec(rec, win.in_buf[i]))
+        if (!read_rec(&rec, win.input_buf[i]))
             continue;
 
-        rec->timestamp = now;
-        buf->len += 1;
+        InputBufferCopy(tmp, &rec);
     }
 
     return true;

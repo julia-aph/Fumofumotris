@@ -5,17 +5,17 @@
 #include "win.h"
 #endif
 
-double GetTime()
+struct timespec TimeNow()
+{
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    return ts;
+}
+
+double TimeNowDouble()
 {
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
 
     return ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
-}
-
-bool Wait(double seconds)
-{
-    #ifdef _WIN32
-    return WindowsWait(seconds);
-    #endif
 }

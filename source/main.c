@@ -11,10 +11,7 @@
 #include "term.h"
 #include "tetr.h"
 #include "event.h"
-
-#ifdef _WIN32
-#include "win.h"
-#endif
+#include "platform.h"
 
 struct Instance {
     struct Controller ctrl;
