@@ -82,43 +82,28 @@ void InputBufferCopy(struct InputBuffer *buf, struct InputRecord *src)
     buf->len += 1;
 }
 
-struct thread_init {
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    bool done;
-
-    void *args;
-};
-
 struct input_args {
     struct InputBuffer *buf;
     pthread_mutex_t *mutex;
 };
 
-bool ThreadSignalInit()
+void *block_input(struct input_args *args)
 {
-    
-}
+    struct input_args async = *args;
 
-void *block_input(void *args)
-{
-    struct input_args *args = args + 1;
-    pthread_mutex_lock(&args->init.mutex);
-    args->init.is_init = true;
-    pthread_cond_signal(&args->init.cond);
-    pthread_mutex_unlock(&args->init.mutex);
-
+    pthread_mutex_t *mutex = async.mutex;
+    struct InputBuffer *ctrl_buf = async.buf;
     struct InputBuffer tmp_buf = { .len = 0, .start = 0 };
 
     while (true) {
         if (!PlatformReadInput(&tmp_buf))
             return false;
 
-        pthread_mutex_lock(&in->mutex);
+        pthread_mutex_lock(&args->mutex);
         {
-            InputBufferTransfer(&tmp_buf, buf);
+            InputBufferTransfer(&tmp_buf, async.buf);
         }
-        pthread_mutex_unlock(&in->mutex);
+        pthread_mutex_unlock(async.mutex);
     }
 
     return nullptr;
@@ -133,13 +118,6 @@ void *thread_wrap(void *init_ptr)
 
 bool ThreadWaitInit(void *(*func), size_t args_len, void *args)
 {
-    struct thread_init init = {
-        .mutex = PTHREAD_MUTEX_INITIALIZER,
-        .cond = PTHREAD_COND_INITIALIZER,
-        .done = false,
-        .args = &args,
-    };
-
     pthread_t thread;
     if (pthread_create(&thread, nullptr, thread_wrap, &init) != 0)
         return false;
