@@ -114,7 +114,7 @@ void Loop(struct Instance *game)
 
 bool Start(struct Instance *game)
 {
-    if (!NewCtrl(&game->ctrl, code_count, code_count))
+    if (!NewCtrl(&game->ctrl))
         return false;
 
     for (size_t i = 0; i < code_count; i++) {
@@ -144,7 +144,7 @@ int main()
     if(!PlatformInit())
         exit(1);
 
-    InputStart(&game.ctrl.input_buf, );
+    InputStart(&game.ctrl.buf, );
     Loop(&game);
 
     return 0;

@@ -1,89 +1,49 @@
-#include <iso646.h>
-#include <pthread.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+#include "ctrl.h"
 
-#include "fumotris.h"
-#include "hash.h"
-#include "input.h"
-
-struct CtrlAxis {
-    struct timespec last_pressed;
-    struct timespec last_released;
-
-    u8 type;
-    u8 is_down;
-    u8 is_held;
-    u8 is_up;
-
-    union {
-        struct Button but;
-        struct Axis axis;
-        struct Joystick js;
-        union InputData data;
-    };
+struct ctrl_bkt {
+    union InputID id;
+    struct InputAxis *axis;
 };
 
 struct ctrl_dict {
-    size_t capacity;
-    size_t filled;
+    struct ctrl_bkt *bkts;
 
-    struct ctrl_bkt {
-        hashtype hash;
-        u16 value;
-        u8 type;
-
-        struct CtrlAxis *axis;
-    } *bkts;
+    u16f capacity;
+    u16f filled;
 };
 
-struct Controller {
-    struct ctrl_dict codes;
-    struct ctrl_dict binds;
-    struct CtrlAxis *axes;
-
-    struct InputBuffer input_buf;
-
-    struct {
-        size_t len;
-        struct CtrlAxis *axes[IO_BUF_SIZE];
-    } pending_buf;
+struct axis_vec {
+    struct InputAxis *axes;
+    u16f size;
+    u16f len;
 };
 
-bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap)
+size_t a = sizeof(struct ctrl_dict);
+
+bool NewCtrl(struct Controller *ctrl, size_t init_axes)
 {
-    struct ctrl_bkt *code_bkts = calloc(code_cap, sizeof(struct ctrl_bkt));
-    struct ctrl_bkt *bind_bkts = calloc(bind_cap, sizeof(struct ctrl_bkt));
-    struct CtrlAxis *axes = calloc(code_cap, sizeof(struct CtrlAxis));
+    struct ctrl_bkt *code_bkts = calloc(init_axes, sizeof(struct ctrl_bkt));
+    struct ctrl_bkt *bind_bkts = calloc(init_axes, sizeof(struct ctrl_bkt));
+    struct InputAxis *axes = calloc(init_axes, sizeof(struct InputAxis));
 
     if (code_bkts == nullptr or bind_bkts == nullptr or axes == nullptr)
         return false;
 
-    for (size_t i = 0; i < code_cap; i++) {
-        code_bkts[i].axis = axes + i;
-    }
-
     *ctrl = (struct Controller) {
+        .buf.len = 0,
+        .pending_buf.len = 0,
+
+        .axis_vec.axes = axes,
         .codes = (struct ctrl_dict) {
-            .capacity = code_cap,
-            .filled = 0,
             .bkts = code_bkts,
+            .capacity = init_axes,
+            .filled = 0,
         },
         .binds = (struct ctrl_dict) {
-            .capacity = bind_cap,
-            .filled = 0,
             .bkts = bind_bkts,
+            .capacity = init_axes,
+            .filled = 0,
         },
-        .axes = axes,
-        
-        .input_buf = (struct InputBuffer) {
-            .len = 0,
-        },
-        .pending_buf.len = 0,
     };
     return true;
 }
@@ -92,7 +52,7 @@ void FreeCtrl(struct Controller *ctrl)
 {
     free(ctrl->codes.bkts);
     free(ctrl->binds.bkts);
-    free(ctrl->axes);
+    free(ctrl->axis_vec.axes);
 }
 
 struct ctrl_bkt *get_bkt(struct ctrl_dict *dict, size_t i)
@@ -100,122 +60,101 @@ struct ctrl_bkt *get_bkt(struct ctrl_dict *dict, size_t i)
     return &dict->bkts[i];
 }
 
-void set_bkt(struct ctrl_bkt *bkt, hashtype hash, u16f value, u8f type)
-{
-    bkt->hash = hash;
-    bkt->value = value;
-    bkt->type = type;
-}
-
 size_t wrap_index(size_t i, size_t max)
 {
     return i % (SIZE_MAX - max + 1);
 }
 
-hashtype hash_id(u16f value, u8f type)
+struct ctrl_bkt *find_or_set(struct ctrl_dict *dict, union InputID id)
 {
-    struct { u16 id; u8 type; } id = { value, type };
-    return Hash(&id, sizeof(id));
-}
-
-bool find_or_set(struct ctrl_dict *dict, struct ctrl_bkt **out, u16f value, u8f type)
-{
-    hashtype hash = hash_id(value, type);
-    const size_t index = hash % dict->capacity;
+    const size_t index = id.hash % dict->capacity;
 
     size_t i = index;
     while (i != wrap_index(index - 1, dict->capacity)) {
         struct ctrl_bkt *bkt = get_bkt(dict, i);
 
-        if (bkt->hash == 0) {
-            set_bkt(bkt, hash, value, type);
+        if (bkt->axis == nullptr) {
+            bkt->id.hash = id.hash;
             dict->filled += 1;
-            *out = bkt;
-            return false;
+
+            return bkt;
         }
 
-        if (bkt->value == value and bkt->type == type) {
-            *out = bkt;
-            return true;
+        if (bkt->id.hash == id.hash) {
+            return bkt;
         }
         
         i = (i + 1) % dict->capacity;
     }
 
-    *out = nullptr;
-    return false;
+    return nullptr;
 }
 
-struct ctrl_bkt *find(struct ctrl_dict *dict, u16f value, u8f type)
+struct ctrl_bkt *find(struct ctrl_dict *dict, union InputID id)
 {
-    hashtype hash = hash_id(value, type);
-    const size_t index = hash % dict->capacity;
+    const size_t index = id.hash % dict->capacity;
 
     size_t i = index;
     while (i != wrap_index(index - 1, dict->capacity)) {
         struct ctrl_bkt *bkt = get_bkt(dict, i);
-        if (bkt->hash == 0)
-            goto next;
 
-        if (bkt->value == value and bkt->type == type)
+        if (bkt->id.hash == id.hash)
             return bkt;
 
-next:
         i = (i + 1) % dict->capacity;
     };
 
     return nullptr;
 }
 
-struct CtrlAxis *find_axis(struct ctrl_dict *dict, u16f value, u8f type)
+struct InputAxis *find_axis(struct ctrl_dict *dict, union InputID id)
 {
-    struct ctrl_bkt *bkt = find(dict, value, type);
+    struct ctrl_bkt *bkt = find(dict, id);
     if (bkt == nullptr)
         return nullptr;
 
     return bkt->axis;
 }
 
-bool CtrlMap(struct Controller *ctrl, u16f code, u16f bind, u8f type)
+union InputID to_id(u16f value, u16f type)
 {
-    if (ctrl->codes.filled >= ctrl->codes.capacity or ctrl->binds.filled >= ctrl->binds.capacity) {
-        printf("fatal error");
-        exit(1);
-    }
+    return (union InputID) { .value = value, .type = type };
+}
 
-    struct ctrl_bkt *code_bkt;
-    find_or_set(&ctrl->codes, &code_bkt, code, type);
-
-    struct ctrl_bkt *bind_bkt;
-    bool bind_existed = find_or_set(&ctrl->binds, &bind_bkt, bind, type);
+bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind)
+{
+    struct ctrl_bkt *code_bkt = find_or_set(&ctrl->codes, to_id(code, type));
+    struct ctrl_bkt *bind_bkt = find_or_set(&ctrl->binds, to_id(bind, type));
     
-    if(bind_existed and bind_bkt->axis == code_bkt->axis)
+    if (code_bkt->axis == nullptr)
+        code_bkt->axis = &ctrl->axis_vec.axes[ctrl->axis_vec.len++];
+    else if (code_bkt->axis == bind_bkt->axis)
         return false;
     
     bind_bkt->axis = code_bkt->axis;
-    code_bkt->axis->type = type;
+    code_bkt->axis->id.type = type;
     return true;
 }
 
-struct CtrlAxis *CtrlGet(struct Controller *ctrl, u16f code, u8f type)
+struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type)
 {
-    struct ctrl_bkt *code_bkt = find(&ctrl->codes, code, type);
+    struct ctrl_bkt *code_bkt = find(&ctrl->codes, to_id(code, type));
     if (code_bkt == nullptr)
         return nullptr;
 
     return code_bkt->axis;
 }
 
-void dispatch_update(struct CtrlAxis *axis, struct InputRecord *rec)
+void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
 {
     if (rec->is_down and !axis->is_held) {
         axis->is_down = true;
         axis->is_held = true;
-        axis->last_pressed = rec->timestamp;
+        axis->last_pressed = rec->time;
     } else if (rec->is_up) {
         axis->is_up = true;
         axis->is_held = false;
-        axis->last_released = rec->timestamp;
+        axis->last_released = rec->time;
     }
 
     axis->data = rec->data;
@@ -224,17 +163,18 @@ void dispatch_update(struct CtrlAxis *axis, struct InputRecord *rec)
 bool CtrlPoll(struct Controller *ctrl)
 {
     for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
-        struct CtrlAxis *axis = ctrl->pending_buf.axes[i];
+        struct InputAxis *axis = ctrl->pending_buf.axes[i];
 
         axis->is_up = false;
         axis->is_down = false;
     }
-    ctrl->pending_buf.len = ctrl->input_buf.len;
+    ctrl->pending_buf.len = ctrl->buf.len;
 
-    for (size_t i = 0; i < ctrl->input_buf.len; i++) {
-        struct InputRecord *rec = &ctrl->input_buf.records[i];
-        struct CtrlAxis *axis = find_axis(&ctrl->binds, rec->bind, rec->type);
+    for (size_t i = 0; i < ctrl->buf.len; i++) {
+        struct InputRecord *rec = &ctrl->buf.recs[i];
 
+        union InputID rec_id = to_id(rec->bind, rec->type);
+        struct InputAxis *axis = find_axis(&ctrl->binds, rec_id);
         if (axis == nullptr)
             continue;
 
@@ -242,7 +182,7 @@ bool CtrlPoll(struct Controller *ctrl)
 
         ctrl->pending_buf.axes[i] = axis;
     }
-    ctrl->input_buf.len = 0;
+    ctrl->buf.len = 0;
 
     return true;
 }
@@ -250,22 +190,32 @@ bool CtrlPoll(struct Controller *ctrl)
 int main() 
 {
     struct Controller ctrl;
-    if (!NewCtrl(&ctrl, 3, 3))
+    if (!NewCtrl(&ctrl, 3))
         return 1;
 
-    CtrlMap(&ctrl, 123, 111, BUTTON);
+    CtrlMap(&ctrl, 123, BUTTON, 111);
+    CtrlMap(&ctrl, 0, BUTTON, 8);
     
-    ctrl.input_buf.records[ctrl.input_buf.len++] = (struct InputRecord) {
+    ctrl.buf.recs[ctrl.buf.len++] = (struct InputRecord) {
         .bind = 111,
         .type = BUTTON,
         .is_down = true,
         .but.value = 69
     };
+    ctrl.buf.recs[ctrl.buf.len++] = (struct InputRecord) {
+        .bind = 8,
+        .type = BUTTON,
+        .is_down = true,
+        .but.value = 1000
+    };
 
     CtrlPoll(&ctrl);
 
-    struct CtrlAxis *a = CtrlGet(&ctrl, 123, BUTTON);
+    struct InputAxis *a = CtrlGet(&ctrl, 123, BUTTON);
     printf("%u\n", a->but.value);
+    
+    struct InputAxis *b = CtrlGet(&ctrl, 0, BUTTON);
+    printf("%u\n", b->but.value);
 
     printf("success");
     return 0;

@@ -5,21 +5,14 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
 #include "fumotris.h"
-#include "hash.h"
+#include "gametime.h"
 #include "input.h"
 
-struct CtrlAxis {
-    struct timespec last_pressed;
-    struct timespec last_released;
-
-    u8 type;
-    u8 is_down;
-    u8 is_held;
-    u8 is_up;
+struct InputAxis {
+    struct Time last_pressed;
+    struct Time last_released;
 
     union {
         struct Button but;
@@ -27,40 +20,50 @@ struct CtrlAxis {
         struct Joystick js;
         union InputData data;
     };
+
+    union InputID id;
+    u8 is_down;
+    u8 is_held;
+    u8 is_up;
 };
 
-struct ctrl_dict {
-    size_t capacity;
-    size_t filled;
+static struct ctrl_bkt {
+    union InputID id;
+    struct InputAxis *axis;
+};
 
-    struct ctrl_bkt {
-        hashtype hash;
-        u16 value;
-        u8 type;
+static struct ctrl_dict {
+    struct ctrl_bkt *bkts;
 
-        struct CtrlAxis *axis;
-    } *bkts;
+    u16f capacity;
+    u16f filled;
+};
+
+static struct axis_vec {
+    struct InputAxis *axes;
+
+    u16f size;
+    u16f len;
 };
 
 struct Controller {
+    struct InputBuffer buf;
+    struct {
+        struct InputAxis *axes[IO_BUF_SIZE];
+        u16f len;
+    } pending_buf;
+
+    struct axis_vec axis_vec;
     struct ctrl_dict codes;
     struct ctrl_dict binds;
-    struct CtrlAxis *axes;
-
-    struct InputBuffer input_buf;
-
-    struct {
-        size_t len;
-        struct CtrlAxis *axes[IO_BUF_SIZE];
-    } pending_buf;
 };
 
-bool NewCtrl(struct Controller *ctrl, size_t code_cap, size_t bind_cap);
+bool NewCtrl(struct Controller *ctrl, size_t init_axes);
 
 void FreeCtrl(struct Controller *ctrl);
 
-bool CtrlMap(struct Controller *ctrl, u16f code, u16f bind, u8f type);
+bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind);
 
-struct CtrlAxis *CtrlGet(struct Controller *ctrl, u16f code, u8f type);
+struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type);
 
 bool CtrlPoll(struct Controller *ctrl);

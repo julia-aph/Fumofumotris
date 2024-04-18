@@ -1,64 +1,11 @@
-#include <iso646.h>
+#include "input.h"
 #include <pthread.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 
-#include "fumotris.h"
 #include "platform.h"
-
-#define IO_BUF_SIZE 16
-
-enum InputType {
-    BUTTON,
-    AXIS,
-    JOYSTICK,
-    ESCAPE
-};
-
-struct Button {
-    u64 value;
-};
-struct Axis {
-    i64 value;
-};
-struct Joystick {
-    i32 x;
-    i32 y;
-};
-union InputData {
-    struct Button input_but;
-    struct Axis input_axis;
-    struct Joystick input_js;
-};
-
-struct InputRecord {
-    u16f bind;
-    struct timespec timestamp;
-
-    u8 type;
-    u8 is_down;
-    u8 is_held;
-    u8 is_up;
-
-    union {
-        struct Button but;
-        struct Axis axis;
-        struct Joystick js;
-        union InputData data;
-    };
-};
-
-struct InputBuffer {
-    size_t len;
-    size_t start;
-    struct InputRecord records[IO_BUF_SIZE];
-};
 
 struct InputRecord *in_buf_get(struct InputBuffer *buf, size_t i)
 {
-    return buf->records + (buf->start + 1) % IO_BUF_SIZE;
+    return buf->recs + (buf->start + 1) % IO_BUF_SIZE;
 }
 
 void InputBufferTransfer(struct InputBuffer *tmp, struct InputBuffer *dest)
@@ -78,7 +25,7 @@ void InputBufferTransfer(struct InputBuffer *tmp, struct InputBuffer *dest)
 
 void InputBufferCopy(struct InputBuffer *buf, struct InputRecord *src)
 {
-    buf->records[(buf->start + buf->len) % IO_BUF_SIZE] = *src;
+    buf->recs[(buf->start + buf->len) % IO_BUF_SIZE] = *src;
     buf->len += 1;
 }
 

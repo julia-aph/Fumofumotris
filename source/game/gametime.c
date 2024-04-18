@@ -5,11 +5,17 @@
 #include "win.h"
 #endif
 
-struct timespec TimeNow()
+struct Time {
+    u32 sec;
+    u32 nsec;
+};
+
+struct Time TimeNow()
 {
     struct timespec ts;
+    // Need to check for failiure
     timespec_get(&ts, TIME_UTC);
-    return ts;
+    return (struct Time) { ts.tv_sec, ts.tv_nsec };
 }
 
 double TimeNowDouble()
