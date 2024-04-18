@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "ctrl.h"
+#include "input.h"
 #include "fumotris.h"
 #include "term.h"
 #include "tetr.h"
@@ -140,13 +141,11 @@ int main()
     if (!Start(&game))
         exit(1);
 
-    if(!PlatformInit(&game.term))
+    if(!PlatformInit())
         exit(1);
 
-    StartInput(&game.ctrl);
+    InputStart(&game.ctrl.input_buf, );
     Loop(&game);
-
-    JoinInput(&game.ctrl);
 
     return 0;
 }

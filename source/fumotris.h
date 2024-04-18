@@ -27,3 +27,18 @@ typedef int_fast32_t   i32f;
 
 typedef int64_t        i64;
 typedef int_fast64_t   i64f;
+
+enum CtrlCode {
+    LEFT,
+    RIGHT,
+    SOFT_DROP,
+    HARD_DROP,
+    ROTATE_CCW,
+    ROTATE_CW,
+    ROTATE_180,
+    SWAP,
+    ESC,
+    VSCROLL,
+    HSCROLL,
+    MOUSE
+};

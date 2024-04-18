@@ -89,56 +89,34 @@ struct input_args {
 
 void *block_input(struct input_args *args)
 {
-    struct input_args async = *args;
+    struct InputBuffer *buf = args->buf;
+    pthread_mutex_t *mutex = args->mutex;
+    free(args);
 
-    pthread_mutex_t *mutex = async.mutex;
-    struct InputBuffer *ctrl_buf = async.buf;
     struct InputBuffer tmp_buf = { .len = 0, .start = 0 };
 
     while (true) {
         if (!PlatformReadInput(&tmp_buf))
             return false;
 
-        pthread_mutex_lock(&args->mutex);
+        pthread_mutex_lock(mutex);
         {
-            InputBufferTransfer(&tmp_buf, async.buf);
+            InputBufferTransfer(&tmp_buf, buf);
         }
-        pthread_mutex_unlock(async.mutex);
+        pthread_mutex_unlock(mutex);
     }
 
     return nullptr;
 }
 
-void *thread_wrap(void *init_ptr)
-{
-    struct thread_init *init = init_ptr;
-    
-    block_input();
-}
-
-bool ThreadWaitInit(void *(*func), size_t args_len, void *args)
-{
-    pthread_t thread;
-    if (pthread_create(&thread, nullptr, thread_wrap, &init) != 0)
-        return false;
-
-    pthread_mutex_lock(&init.mutex);
-    {
-        while (!init.done)
-            pthread_cond_wait(&init.cond, &init.mutex);
-    }
-    pthread_mutex_unlock(&init.mutex);
-
-    pthread_mutex_destroy(&init.mutex);
-    pthread_cond_destroy(&init.cond);
-}
-
 bool InputStart(struct InputBuffer *buf, pthread_mutex_t *mutex)
 {
-    struct input_args args = {
+    struct input_args *args = malloc(sizeof(struct input_args));
+    *args = (struct input_args) {
         .buf = buf,
         .mutex = mutex,
     };
 
-    return ThreadWaitInit(block_input, &args);
+    pthread_t thread;
+    return pthread_create(&thread, nullptr, block_input, args) == 0;
 }

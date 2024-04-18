@@ -9,11 +9,9 @@
 #include "ctrl.h"
 #include "gametime.h"
 
-static struct Windows {
+static struct windows {
     HANDLE timer;
     HANDLE input_handle;
-    DWORD input_n;
-    INPUT_RECORD input_buf[IO_BUF_SIZE];
 } win;
 
 bool init_handles()
@@ -22,11 +20,7 @@ bool init_handles()
     if (win.input_handle == INVALID_HANDLE_VALUE)
         return false;
 
-    win.timer = CreateWaitableTimer(
-        NULL,                       // Timer attributes
-        TRUE,                       // Manual reset
-        NULL                        // Name
-    );
+    win.timer = CreateWaitableTimerW(NULL, TRUE, NULL);
     if (win.timer == NULL)
         return false;
 
@@ -40,6 +34,7 @@ bool init_console()
         | ENABLE_PROCESSED_OUTPUT
         | ENABLE_MOUSE_INPUT
         | ENABLE_WINDOW_INPUT;
+
     return SetConsoleMode(win.input_handle, mode) != 0;
 }
 
@@ -60,60 +55,53 @@ bool PlatformGetRefreshRate(u16f *out)
     mode.dmSize = sizeof(DEVMODE);
     mode.dmDriverExtra = 0;
 
-    if(!EnumDisplaySettingsA(
-        NULL,                       // Device name (null for current)
-        ENUM_CURRENT_SETTINGS,      // Mode
-        &mode                       // Out
-    ))
+    if(!EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &mode))
         return false;
 
     *out = mode.dmDisplayFrequency;
     return true;
 }
 
-void read_key_rec(struct InputRecord *rec, KEY_EVENT_RECORD win_key)
+void copy_key_event(struct InputRecord *rec, KEY_EVENT_RECORD *win_key)
 {
     rec->type = BUTTON;
-    rec->bind = win_key.wVirtualKeyCode;
+    rec->bind = win_key->wVirtualKeyCode;
 
-    rec->is_down = win_key.bKeyDown;
-    rec->is_up = !win_key.bKeyDown;
+    rec->is_down = win_key->bKeyDown;
+    rec->is_up = !win_key->bKeyDown;
 }
 
-bool read_mouse_rec(struct InputRecord *rec, MOUSE_EVENT_RECORD win_mouse)
+bool copy_mouse_event(struct InputRecord *rec, MOUSE_EVENT_RECORD *win_mouse)
 {
-    if (win_mouse.dwEventFlags == MOUSE_MOVED) {
+    if (win_mouse->dwEventFlags == MOUSE_MOVED) {
         rec->type = JOYSTICK;
         rec->bind = 0;
-        rec->js.x = win_mouse.dwMousePosition.X;
-        rec->js.y = win_mouse.dwMousePosition.Y;
+        rec->js.x = win_mouse->dwMousePosition.X;
+        rec->js.y = win_mouse->dwMousePosition.Y;
         
         return true;
     }
 
-    if (win_mouse.dwEventFlags == MOUSE_WHEELED) {
-        rec->bind = 0;
-    } else if (win_mouse.dwEventFlags == MOUSE_HWHEELED) {
-        rec->bind = 1;
-    } else {
-        return false;
+    if (win_mouse->dwEventFlags & (MOUSE_WHEELED | MOUSE_HWHEELED) != 0) {
+        rec->type = AXIS;
+        rec->bind = win_mouse->dwEventFlags == MOUSE_WHEELED;
+        rec->axis.value = win_mouse->dwButtonState;
+
+        return true;
     }
 
-    rec->type = AXIS;
-    rec->axis.value = win_mouse.dwButtonState;
-
-    return true;
+    return false;
 }
 
-bool read_rec(struct InputRecord *rec, INPUT_RECORD win_rec)
+bool copy_rec(struct InputRecord *rec, INPUT_RECORD *win_rec)
 {
-    switch (win_rec.EventType) {
+    switch (win_rec->EventType) {
     case KEY_EVENT:
-        read_key_rec(rec, win_rec.Event.KeyEvent);
+        copy_key_event(rec, &win_rec->Event.KeyEvent);
         return true;
 
     case MOUSE_EVENT:
-        return read_mouse_rec(rec, win_rec.Event.MouseEvent);
+        return copy_mouse_event(rec, &win_rec->Event.MouseEvent);
 
     case WINDOW_BUFFER_SIZE_EVENT:
         return false;
@@ -124,23 +112,22 @@ bool read_rec(struct InputRecord *rec, INPUT_RECORD win_rec)
     return false;
 }
 
-bool PlatformReadInput(struct InputBuffer *tmp)
+bool PlatformReadInput(struct InputBuffer *buf)
 {
-    if (!ReadConsoleInput(
-        win.input_handle,           // Input handle
-        &win.input_buf[tmp->len],   // Record buffer
-        IO_BUF_SIZE - tmp->len,     // Record buffer length
-        &win.input_n                // Out number of records
-    ))
+    DWORD max_records = IO_BUF_SIZE - buf->len;
+    INPUT_RECORD win_buf[max_records];
+    
+    DWORD filled;
+    if (!ReadConsoleInputW(win.input_handle, win_buf, max_records, &filled))
         return false;
 
     struct InputRecord rec = { .timestamp = TimeNow() };
-    for (size_t i = 0; i < win.input_n; i++) {
 
-        if (!read_rec(&rec, win.input_buf[i]))
+    for (size_t i = 0; i < filled; i++) {
+        if (!copy_rec(&rec, win_buf + i))
             continue;
 
-        InputBufferCopy(tmp, &rec);
+        InputBufferCopy(buf, &rec);
     }
 
     return true;
@@ -151,14 +138,7 @@ bool PlatformWait(struct timespec relative)
     LARGE_INTEGER duration;
     duration.QuadPart = -10000000 * relative.tv_sec - relative.tv_nsec / 100;
 
-    if (!SetWaitableTimer(
-        win.timer,                 // Timer
-        &duration,                  // Duration
-        0,                          // Period
-        NULL,                       // Completion coroutine
-        NULL,                       // Completion coroutine arg
-        FALSE                       // Resume
-    ))
+    if (!SetWaitableTimer(win.timer, &duration, 0, NULL,NULL, FALSE))
         return false;
 
     DWORD result = WaitForSingleObject(win.timer, INFINITE);
