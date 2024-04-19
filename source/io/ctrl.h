@@ -27,21 +27,19 @@ struct InputAxis {
     u8 is_up;
 };
 
-static struct ctrl_bkt {
-    union InputID id;
+struct ctrl_bkt {
     struct InputAxis *axis;
+    union InputID id;
 };
 
-static struct ctrl_dict {
+struct ctrl_dict {
     struct ctrl_bkt *bkts;
-
     u16f capacity;
     u16f filled;
 };
 
-static struct axis_vec {
+struct ctrl_axis_vec {
     struct InputAxis *axes;
-
     u16f size;
     u16f len;
 };
@@ -53,7 +51,7 @@ struct Controller {
         u16f len;
     } pending_buf;
 
-    struct axis_vec axis_vec;
+    struct ctrl_axis_vec axis_vec;
     struct ctrl_dict codes;
     struct ctrl_dict binds;
 };
@@ -67,3 +65,40 @@ bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind);
 struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type);
 
 bool CtrlPoll(struct Controller *ctrl);
+
+enum ControlCode {
+    LEFT,
+    RIGHT,
+    SOFT_DROP,
+    HARD_DROP,
+    ROTATE_CCW,
+    ROTATE_CW,
+    ROTATE_180,
+    SWAP,
+    ESC,
+    VSCROLL,
+    HSCROLL,
+    MOUSE
+};
+
+struct ControlBind {
+    enum ControlCode code;
+    u16 bind;
+    u8 type;
+};
+
+const size_t code_count = 12;
+const struct ControlBind ctrl_binds[12] = {
+    { LEFT, 0x25, BUTTON },
+    { RIGHT, 0x27, BUTTON },
+    { SOFT_DROP, 0x28, BUTTON },
+    { HARD_DROP, 0x20, BUTTON },
+    { ROTATE_CCW, 'Z', BUTTON },
+    { ROTATE_CW, 'X', BUTTON },
+    { ROTATE_180, 'A', BUTTON },
+    { SWAP, 'C', BUTTON },
+    { ESC, 0x1B, BUTTON },
+    { VSCROLL, 0, AXIS },
+    { HSCROLL, 1, AXIS },
+    { MOUSE, 0, JOYSTICK }
+};

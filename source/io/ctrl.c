@@ -1,25 +1,5 @@
 #include "ctrl.h"
 
-struct ctrl_bkt {
-    union InputID id;
-    struct InputAxis *axis;
-};
-
-struct ctrl_dict {
-    struct ctrl_bkt *bkts;
-
-    u16f capacity;
-    u16f filled;
-};
-
-struct axis_vec {
-    struct InputAxis *axes;
-    u16f size;
-    u16f len;
-};
-
-size_t a = sizeof(struct ctrl_dict);
-
 bool NewCtrl(struct Controller *ctrl, size_t init_axes)
 {
     struct ctrl_bkt *code_bkts = calloc(init_axes, sizeof(struct ctrl_bkt));

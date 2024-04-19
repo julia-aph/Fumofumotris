@@ -35,6 +35,7 @@ struct Joystick {
     i32 x;
     i32 y;
 };
+
 union InputData {
     struct Button input_but;
     struct Axis input_axis;
@@ -67,6 +68,6 @@ struct InputBuffer {
 
 void InputBufferTransfer(struct InputBuffer *tmp, struct InputBuffer *dest);
 
-void InputBufferCopy(struct InputBuffer *buf, struct InputRecord *src);
+void InputBufferAdd(struct InputBuffer *buf, struct InputRecord *src);
 
 bool InputStart(struct InputBuffer *buf, pthread_mutex_t *mutex);

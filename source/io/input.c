@@ -3,30 +3,31 @@
 
 #include "platform.h"
 
-struct InputRecord *in_buf_get(struct InputBuffer *buf, size_t i)
-{
-    return buf->recs + (buf->start + 1) % IO_BUF_SIZE;
+struct InputRecord *buf_get(struct InputBuffer *buf, size_t i) {
+    return buf->recs + (buf->start + i) % IO_BUF_SIZE;
 }
 
-void InputBufferTransfer(struct InputBuffer *tmp, struct InputBuffer *dest)
-{
-    size_t n = IO_BUF_SIZE - (tmp->len > dest->len ? tmp->len : dest->len);
-
-    for (size_t i = 0; i < n; i++) {
-        *in_buf_get(dest, dest->len + i) = *in_buf_get(tmp, i);
-    }
-
-    if (n < tmp->len)
-        tmp->start += n;
-
-    tmp->len -= n;
-    dest->len += n;
+size_t max_size(size_t a, size_t b) {
+    return a > b ? a : b;
 }
 
-void InputBufferCopy(struct InputBuffer *buf, struct InputRecord *src)
+void InputBufferTransfer(struct InputBuffer *dest, struct InputBuffer *src)
 {
-    buf->recs[(buf->start + buf->len) % IO_BUF_SIZE] = *src;
-    buf->len += 1;
+    size_t copy_amt = IO_BUF_SIZE - max_size(dest->len, src->len);
+
+    for (size_t i = 0; i < copy_amt; i++)
+        *buf_get(dest, dest->len + i) = *buf_get(src, i);
+
+    if (copy_amt < src->len)
+        src->start += copy_amt;
+
+    src->len -= copy_amt;
+    dest->len += copy_amt;
+}
+
+void InputBufferAdd(struct InputBuffer *buf, struct InputRecord *rec)
+{
+    *buf_get(buf, buf->len++) = *rec;
 }
 
 struct input_args {
@@ -34,7 +35,7 @@ struct input_args {
     pthread_mutex_t *mutex;
 };
 
-void *block_input(struct input_args *args)
+void *input_thread_loop(struct input_args *args)
 {
     struct InputBuffer *buf = args->buf;
     pthread_mutex_t *mutex = args->mutex;
@@ -56,7 +57,7 @@ void *block_input(struct input_args *args)
     return nullptr;
 }
 
-bool InputStart(struct InputBuffer *buf, pthread_mutex_t *mutex)
+bool CreateInputThread(struct InputBuffer *buf, pthread_mutex_t *mutex)
 {
     struct input_args *args = malloc(sizeof(struct input_args));
     *args = (struct input_args) {
@@ -65,5 +66,5 @@ bool InputStart(struct InputBuffer *buf, pthread_mutex_t *mutex)
     };
 
     pthread_t thread;
-    return pthread_create(&thread, nullptr, block_input, args) == 0;
+    return pthread_create(&thread, nullptr, input_thread_loop, args) == 0;
 }

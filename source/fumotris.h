@@ -28,17 +28,44 @@ typedef int_fast32_t   i32f;
 typedef int64_t        i64;
 typedef int_fast64_t   i64f;
 
-enum CtrlCode {
-    LEFT,
-    RIGHT,
-    SOFT_DROP,
-    HARD_DROP,
-    ROTATE_CCW,
-    ROTATE_CW,
-    ROTATE_180,
-    SWAP,
-    ESC,
-    VSCROLL,
-    HSCROLL,
-    MOUSE
+const u8 I[16] = {
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    1, 1, 1, 1,
+    0, 0, 0, 0
+};
+
+const u8 O[4] = {
+    1, 1,
+    1, 1
+};
+
+const u8 T[9] = {
+    0, 1, 0,
+    1, 1, 1,
+    0, 0, 0
+};
+
+const u8 S[9] = {
+    0, 1, 1,
+    1, 1, 0,
+    0, 0, 0
+};
+
+const u8 Z[9] = {
+    1, 1, 0,
+    0, 1, 1,
+    0, 0, 0
+};
+
+const u8 J[9] = {
+    1, 0, 0,
+    1, 1, 1,
+    0, 0, 0
+};
+
+const u8 L[9] = {
+    0, 0, 1,
+    1, 1, 1,
+    0, 0, 0
 };

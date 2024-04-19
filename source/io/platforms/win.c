@@ -1,13 +1,9 @@
-#include <iso646.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "win.h"
+
 #include <windows.h>
 
-#include "fumotris.h"
-#include "ctrl.h"
 #include "gametime.h"
+#include "input.h"
 
 static struct windows {
     HANDLE timer;
@@ -121,22 +117,22 @@ bool PlatformReadInput(struct InputBuffer *buf)
     if (!ReadConsoleInputW(win.input_handle, win_buf, max_records, &filled))
         return false;
 
-    struct InputRecord rec = { .timestamp = TimeNow() };
+    struct InputRecord rec = { .time = TimeNow() };
 
     for (size_t i = 0; i < filled; i++) {
         if (!copy_rec(&rec, win_buf + i))
             continue;
 
-        InputBufferCopy(buf, &rec);
+        InputBufferAdd(buf, &rec);
     }
 
     return true;
 }
 
-bool PlatformWait(struct timespec relative)
+bool PlatformWait(struct Time relative)
 {
     LARGE_INTEGER duration;
-    duration.QuadPart = -10000000 * relative.tv_sec - relative.tv_nsec / 100;
+    duration.QuadPart = -10000000 * relative.sec - relative.nsec / 100;
 
     if (!SetWaitableTimer(win.timer, &duration, 0, NULL,NULL, FALSE))
         return false;
