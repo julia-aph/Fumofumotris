@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "fumotris.h"
 #include "gametime.h"
@@ -19,7 +20,11 @@ enum InputType {
 
 union InputID {
     struct {
-        union { u16 code; u16 bind; u16 value };
+        union {
+            u16 code;
+            u16 bind;
+            u16 value;
+        };
         u16 type;
     };
     u32 hash;
@@ -66,8 +71,20 @@ struct InputBuffer {
     u8f start;
 };
 
+struct InputThreadHandle {
+    struct InputBuffer *buf;
+
+    pthread_t thread;
+    pthread_mutex_t mutex;
+
+    int err;
+    bool is_terminating;
+};
+
 void InputBufferTransfer(struct InputBuffer *tmp, struct InputBuffer *dest);
 
 void InputBufferAdd(struct InputBuffer *buf, struct InputRecord *src);
 
-bool InputStart(struct InputBuffer *buf, pthread_mutex_t *mutex);
+bool BeginInputThread(struct InputThreadHandle *hand, struct InputBuffer *buf);
+
+bool EndInputThread(struct InputThreadHandle *hand);

@@ -28,7 +28,7 @@ typedef int_fast32_t   i32f;
 typedef int64_t        i64;
 typedef int_fast64_t   i64f;
 
-const u8 I[16] = {
+/*const u8 I[16] = {
     0, 0, 0, 0,
     0, 0, 0, 0,
     1, 1, 1, 1,
@@ -68,4 +68,4 @@ const u8 L[9] = {
     0, 0, 1,
     1, 1, 1,
     0, 0, 0
-};
+};*/

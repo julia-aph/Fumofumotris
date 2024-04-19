@@ -56,7 +56,7 @@ struct Controller {
     struct ctrl_dict binds;
 };
 
-bool NewCtrl(struct Controller *ctrl, size_t init_axes);
+bool CreateCtrl(struct Controller *ctrl);
 
 void FreeCtrl(struct Controller *ctrl);
 
@@ -87,8 +87,8 @@ struct ControlBind {
     u8 type;
 };
 
-const size_t code_count = 12;
-const struct ControlBind ctrl_binds[12] = {
+#define CODE_COUNT 12
+/*const struct ControlBind ctrl_binds[12] = {
     { LEFT, 0x25, BUTTON },
     { RIGHT, 0x27, BUTTON },
     { SOFT_DROP, 0x28, BUTTON },
@@ -101,4 +101,4 @@ const struct ControlBind ctrl_binds[12] = {
     { VSCROLL, 0, AXIS },
     { HSCROLL, 1, AXIS },
     { MOUSE, 0, JOYSTICK }
-};
+};*/

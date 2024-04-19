@@ -1,5 +1,4 @@
 #include "input.h"
-#include <pthread.h>
 
 #include "platform.h"
 
@@ -30,41 +29,46 @@ void InputBufferAdd(struct InputBuffer *buf, struct InputRecord *rec)
     *buf_get(buf, buf->len++) = *rec;
 }
 
-struct input_args {
-    struct InputBuffer *buf;
-    pthread_mutex_t *mutex;
-};
-
-void *input_thread_loop(struct input_args *args)
+void *input_thread_loop(struct InputThreadHandle *hand)
 {
-    struct InputBuffer *buf = args->buf;
-    pthread_mutex_t *mutex = args->mutex;
-    free(args);
-
     struct InputBuffer tmp_buf = { .len = 0, .start = 0 };
 
-    while (true) {
-        if (!PlatformReadInput(&tmp_buf))
-            return false;
-
-        pthread_mutex_lock(mutex);
-        {
-            InputBufferTransfer(&tmp_buf, buf);
+    while (!hand->is_terminating) {
+        if (!PlatformReadInput(&tmp_buf)) {
+            hand->err = true;
+            return;
         }
-        pthread_mutex_unlock(mutex);
-    }
 
-    return nullptr;
+        hand->err = pthread_mutex_lock(&hand->mutex);
+        if (hand->err)
+            return;
+
+        InputBufferTransfer(&tmp_buf, hand->buf);
+
+        hand->err = pthread_mutex_unlock(&hand->mutex);
+        if (hand->err)
+            return;
+    }
 }
 
-bool CreateInputThread(struct InputBuffer *buf, pthread_mutex_t *mutex)
+bool BeginInputThread(struct InputThreadHandle *hand, struct InputBuffer *buf)
 {
-    struct input_args *args = malloc(sizeof(struct input_args));
-    *args = (struct input_args) {
-        .buf = buf,
-        .mutex = mutex,
-    };
+    hand->mutex = PTHREAD_MUTEX_INITIALIZER;
+    return pthread_create(&hand->thread, nullptr, input_thread_loop, hand) == 0;
+}
 
-    pthread_t thread;
-    return pthread_create(&thread, nullptr, input_thread_loop, args) == 0;
+bool EndInputThread(struct InputThreadHandle *hand)
+{
+    hand->is_terminating = true;
+
+    if (!PlatformStopInput())
+        return false;
+
+    if (!pthread_mutex_destroy(&hand->mutex))
+        return false;
+
+    if (!pthread_join(hand->thread, nullptr))
+        return false;
+
+    return true;
 }

@@ -12,19 +12,12 @@
     #include "win.h"
 #endif
 
-enum PlatformError {
-    PLTF_E_INITFAIL,
-};
-
-struct Error {
-    int e;
-    
-};
-
 bool PlatformInit();
 
 bool PlatformGetRefreshRate(u16f *out);
 
 bool PlatformReadInput(struct InputBuffer *buf);
+
+bool PlatformStopInput();
 
 bool PlatformWait(struct Time relative);

@@ -14,17 +14,26 @@
 #include "event.h"
 #include "platform.h"
 
+void ErrorExit(char *message)
+{
+    printf(message);
+    exit(1);
+}
+
 int main()
 {
-    struct Instance game;
-    if (!Start(&game))
-        exit(1);
+    if (!PlatformInit())
+        ErrorExit("Platform failed to initialize");
 
-    if(!PlatformInit())
-        exit(1);
+    struct Controller ctrl;
+    if (!CreateCtrl(&ctrl))
+        ErrorExit("Out of memory");
 
-    CreateInputThread(&game.ctrl.buf, );
-    Loop(&game);
+    struct InputThreadHandle input;
+    if (!BeginInputThread(&input, &ctrl.buf))
+        ErrorExit("Input handle failed to initialize");
+
+    printf("woah");
 
     return 0;
 }

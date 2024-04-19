@@ -5,19 +5,29 @@
 #include "gametime.h"
 #include "input.h"
 
-static struct windows {
+struct windows {
+    union {
+        HANDLE input_hands[2];
+        struct {
+            HANDLE input_hand;
+            HANDLE early_exit_hand;
+        };
+    };
     HANDLE timer;
-    HANDLE input_handle;
 } win;
 
 bool init_handles()
 {
-    win.input_handle = GetStdHandle(STD_INPUT_HANDLE);
-    if (win.input_handle == INVALID_HANDLE_VALUE)
+    win.input_hand = GetStdHandle(STD_INPUT_HANDLE);
+    if (win.input_hand == INVALID_HANDLE_VALUE)
         return false;
 
     win.timer = CreateWaitableTimerW(NULL, TRUE, NULL);
     if (win.timer == NULL)
+        return false;
+
+    win.early_exit_hand = CreateEventW(NULL, FALSE, FALSE, NULL);
+    if (win.early_exit_hand == NULL)
         return false;
 
     return true;
@@ -31,7 +41,7 @@ bool init_console()
         | ENABLE_MOUSE_INPUT
         | ENABLE_WINDOW_INPUT;
 
-    return SetConsoleMode(win.input_handle, mode) != 0;
+    return SetConsoleMode(win.input_hand, mode) != 0;
 }
 
 bool PlatformInit()
@@ -47,11 +57,11 @@ bool PlatformInit()
 
 bool PlatformGetRefreshRate(u16f *out)
 {
-    DEVMODE mode;
-    mode.dmSize = sizeof(DEVMODE);
+    DEVMODEW mode;
+    mode.dmSize = sizeof(DEVMODEW);
     mode.dmDriverExtra = 0;
 
-    if(!EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &mode))
+    if(!EnumDisplaySettingsW(NULL, ENUM_CURRENT_SETTINGS, &mode))
         return false;
 
     *out = mode.dmDisplayFrequency;
@@ -110,11 +120,16 @@ bool copy_rec(struct InputRecord *rec, INPUT_RECORD *win_rec)
 
 bool PlatformReadInput(struct InputBuffer *buf)
 {
+    DWORD wait_status = WaitForMultipleObjects(2, win.input_hands, FALSE, 0);
+    
+    if (wait_status != 0)
+        return wait_status == 1;
+
     DWORD max_records = IO_BUF_SIZE - buf->len;
     INPUT_RECORD win_buf[max_records];
-    
     DWORD filled;
-    if (!ReadConsoleInputW(win.input_handle, win_buf, max_records, &filled))
+    
+    if (!ReadConsoleInputW(win.input_hand, win_buf, max_records, &filled))
         return false;
 
     struct InputRecord rec = { .time = TimeNow() };
@@ -129,12 +144,17 @@ bool PlatformReadInput(struct InputBuffer *buf)
     return true;
 }
 
+bool PlatformStopInput()
+{
+    return SetEvent(win.early_exit_hand) == 0;
+}
+
 bool PlatformWait(struct Time relative)
 {
     LARGE_INTEGER duration;
     duration.QuadPart = -10000000 * relative.sec - relative.nsec / 100;
 
-    if (!SetWaitableTimer(win.timer, &duration, 0, NULL,NULL, FALSE))
+    if (!SetWaitableTimer(win.timer, &duration, 0, NULL, NULL, FALSE))
         return false;
 
     DWORD result = WaitForSingleObject(win.timer, INFINITE);
