@@ -6,13 +6,7 @@
 #include "input.h"
 
 struct windows {
-    union {
-        HANDLE input_hands[2];
-        struct {
-            HANDLE input_hand;
-            HANDLE early_exit_hand;
-        };
-    };
+    HANDLE input_hand;
     HANDLE timer;
 } win;
 
@@ -24,10 +18,6 @@ bool init_handles()
 
     win.timer = CreateWaitableTimerW(NULL, TRUE, NULL);
     if (win.timer == NULL)
-        return false;
-
-    win.early_exit_hand = CreateEventW(NULL, FALSE, FALSE, NULL);
-    if (win.early_exit_hand == NULL)
         return false;
 
     return true;
@@ -68,7 +58,7 @@ bool PlatformGetRefreshRate(u16f *out)
     return true;
 }
 
-void copy_key_event(struct InputRecord *rec, KEY_EVENT_RECORD *win_key)
+void read_key_event(struct InputRecord *rec, KEY_EVENT_RECORD *win_key)
 {
     rec->type = BUTTON;
     rec->bind = win_key->wVirtualKeyCode;
@@ -77,7 +67,7 @@ void copy_key_event(struct InputRecord *rec, KEY_EVENT_RECORD *win_key)
     rec->is_up = !win_key->bKeyDown;
 }
 
-bool copy_mouse_event(struct InputRecord *rec, MOUSE_EVENT_RECORD *win_mouse)
+bool read_mouse_event(struct InputRecord *rec, MOUSE_EVENT_RECORD *win_mouse)
 {
     if (win_mouse->dwEventFlags == MOUSE_MOVED) {
         rec->type = JOYSTICK;
@@ -99,15 +89,15 @@ bool copy_mouse_event(struct InputRecord *rec, MOUSE_EVENT_RECORD *win_mouse)
     return false;
 }
 
-bool copy_rec(struct InputRecord *rec, INPUT_RECORD *win_rec)
+bool read_rec(struct InputRecord *rec, INPUT_RECORD *win_rec)
 {
     switch (win_rec->EventType) {
     case KEY_EVENT:
-        copy_key_event(rec, &win_rec->Event.KeyEvent);
+        read_key_event(rec, &win_rec->Event.KeyEvent);
         return true;
 
     case MOUSE_EVENT:
-        return copy_mouse_event(rec, &win_rec->Event.MouseEvent);
+        return read_mouse_event(rec, &win_rec->Event.MouseEvent);
 
     case WINDOW_BUFFER_SIZE_EVENT:
         return false;
@@ -120,22 +110,17 @@ bool copy_rec(struct InputRecord *rec, INPUT_RECORD *win_rec)
 
 bool PlatformReadInput(struct InputBuffer *buf)
 {
-    DWORD wait_status = WaitForMultipleObjects(2, win.input_hands, FALSE, 0);
-    
-    if (wait_status != 0)
-        return wait_status == 1;
-
     DWORD max_records = IO_BUF_SIZE - buf->len;
     INPUT_RECORD win_buf[max_records];
     DWORD filled;
-    
+
     if (!ReadConsoleInputW(win.input_hand, win_buf, max_records, &filled))
         return false;
 
     struct InputRecord rec = { .time = TimeNow() };
 
     for (size_t i = 0; i < filled; i++) {
-        if (!copy_rec(&rec, win_buf + i))
+        if (!read_rec(&rec, win_buf + i))
             continue;
 
         InputBufferAdd(buf, &rec);
@@ -146,15 +131,15 @@ bool PlatformReadInput(struct InputBuffer *buf)
 
 bool PlatformStopInput()
 {
-    return SetEvent(win.early_exit_hand) == 0;
+    return CancelSynchronousIo(win.input_hand);
 }
 
-bool PlatformWait(struct Time relative)
+bool PlatformWait(Time duration)
 {
-    LARGE_INTEGER duration;
-    duration.QuadPart = -10000000 * relative.sec - relative.nsec / 100;
+    LARGE_INTEGER nsec_div_100;
+    nsec_div_100.QuadPart = -duration / 100;
 
-    if (!SetWaitableTimer(win.timer, &duration, 0, NULL, NULL, FALSE))
+    if (!SetWaitableTimer(win.timer, &nsec_div_100, 0, NULL, NULL, FALSE))
         return false;
 
     DWORD result = WaitForSingleObject(win.timer, INFINITE);

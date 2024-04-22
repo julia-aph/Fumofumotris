@@ -1,11 +1,11 @@
 #pragma once
 #include <stdbool.h>
+#include <stdint.h>
 
-struct Time {
-    u32 sec;
-    u32 nsec;
-};
+#include "fumotris.h"
 
-struct Time TimeNow();
+typedef u64 Time;
 
-double TimeNowDouble();
+Time TimeNow();
+
+double TimeNowD();

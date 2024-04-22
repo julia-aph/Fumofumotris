@@ -6,15 +6,23 @@
 #include <stdlib.h>
 
 #include "fumotris.h"
+#include "gametime.h"
 
-struct Delegate {
-    size_t len;
-    size_t capacity;
-    void (**events)(void *args);
+union func {
+    void (*generic)(void *arg);
+    void (*update)(Time dt);
 };
 
-bool NewDelegate(struct Delegate *d, size_t capacity);
+struct Event {
+    union func *clbks;
+    size_t len;
+    size_t capacity;
+};
 
-void Subscribe(struct Delegate *d, void (*event)(void *args));
+bool CreateEvent(struct Event *event);
 
-void Invoke(struct Delegate *d, void *args);
+bool EventSubscribe(struct Event *event, union func callback);
+
+void EventInvoke(struct Event *event, void *arg);
+
+void EventInvokeUpdate(struct Event *event, Time dt);

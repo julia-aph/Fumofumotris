@@ -48,7 +48,7 @@ union InputData {
 };
 
 struct InputRecord {
-    struct Time time;
+    Time time;
 
     union {
         struct Button but;
@@ -76,6 +76,7 @@ struct InputThreadHandle {
 
     pthread_t thread;
     pthread_mutex_t mutex;
+    pthread_cond_t buf_read;
 
     int err;
     bool is_terminating;

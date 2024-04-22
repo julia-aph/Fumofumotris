@@ -1,5 +1,7 @@
 #include "ctrl.h"
 
+#include <pthread.h>
+
 #define INIT_SIZE 16
 
 bool CreateCtrl(struct Controller *ctrl)
@@ -142,7 +144,7 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
     axis->data = rec->data;
 }
 
-bool CtrlPoll(struct Controller *ctrl)
+bool read_input_buf(struct Controller *ctrl)
 {
     for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
         struct InputAxis *axis = ctrl->pending_buf.axes[i];
@@ -150,22 +152,38 @@ bool CtrlPoll(struct Controller *ctrl)
         axis->is_up = false;
         axis->is_down = false;
     }
-    ctrl->pending_buf.len = ctrl->buf.len;
-
+    ctrl->pending_buf.len = 0;
+    
     for (size_t i = 0; i < ctrl->buf.len; i++) {
         struct InputRecord *rec = &ctrl->buf.recs[i];
 
         union InputID rec_id = to_id(rec->bind, rec->type);
         struct InputAxis *axis = find_axis(&ctrl->binds, rec_id);
+        
         if (axis == nullptr)
             continue;
 
         dispatch_update(axis, rec);
-
-        ctrl->pending_buf.axes[i] = axis;
+        ctrl->pending_buf.axes[ctrl->pending_buf.len++] = axis;
     }
-    ctrl->buf.len = 0;
 
+    ctrl->buf.len = 0;
+    return true;
+}
+
+bool CtrlPoll(struct Controller *ctrl, struct InputThreadHandle *hand)
+{
+    if (pthread_mutex_lock(&hand->mutex) != 0)
+        return false;   
+    
+    read_input_buf(ctrl);
+
+    if (pthread_cond_signal(&hand->buf_read) != 0)
+        return false;
+
+    if (pthread_mutex_unlock(&hand->mutex) != 0)
+        return false;
+    
     return true;
 }
 

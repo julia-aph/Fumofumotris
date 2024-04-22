@@ -1,51 +1,58 @@
-#include <iso646.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "event.h"
 
-#include "fumotris.h"
+#define INIT_CAPACITY 16
 
-struct Delegate {
-    size_t len;
-    size_t capacity;
-    void (**events)(void *args);
-};
-
-size_t delegate_size(size_t capacity)
-{
-    return sizeof(void(*)(void *)) * capacity;
+size_t clbks_size(size_t capacity) {
+    return sizeof(union func) * capacity;
 }
 
-bool NewDelegate(struct Delegate *d, size_t capacity)
+bool CreateEvent(struct Event *event)
 {
-    void (**events)(void *args) = malloc(delegate_size(capacity));
+    union func *callbacks = malloc(clbks_size(INIT_CAPACITY));
     
-    if (events == nullptr)
+    if (callbacks == nullptr)
         return false;
 
-    *d = (struct Delegate) {
+    *event = (struct Event) {
+        .clbks = callbacks,
         .len = 0,
-        .capacity = capacity,
-        .events = malloc(delegate_size(capacity))
+        .capacity = INIT_CAPACITY,
     };
     return true;
 }
 
-void Subscribe(struct Delegate *d, void (*event)(void *args))
+void FreeEvent(struct Event *event)
 {
-    if (d->len == d->capacity) {
-        d->capacity *= 2;
-        d->events = realloc(d->events, delegate_size(d->capacity));
-    }
-
-    d->events[d->len] = event;
-    d->len += 1;
+    free(event->clbks);
 }
 
-void Invoke(struct Delegate *d, void *args)
+bool EventSubscribe(struct Event *event, union func callback)
 {
-    for (size_t i = 0; i < d->len; i++) {
-        d->events[i](args);
+    if (event->len == event->capacity) {
+        size_t new_cap = event->capacity * 2;
+        union func *new_clbks = realloc(event->clbks, clbks_size(new_cap));
+
+        if (new_clbks == nullptr)
+            return false;
+        
+        event->clbks = new_clbks;
+        event->capacity = new_cap;
+    }
+
+    event->clbks[event->len++] = callback;
+    return true;
+}
+
+void EventInvoke(struct Event *event, void *arg)
+{
+    for (size_t i = 0; i < event->len; i++) {
+        event->clbks[i].generic(arg);
+    }
+}
+
+void EventInvokeUpdate(struct Event *event, u64 dt)
+{
+    for (size_t i = 0; i < event->len; i++) {
+        event->clbks[i].update(dt);
     }
 }

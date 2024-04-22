@@ -20,4 +20,4 @@ bool PlatformReadInput(struct InputBuffer *buf);
 
 bool PlatformStopInput();
 
-bool PlatformWait(struct Time relative);
+bool PlatformWait(Time duration);

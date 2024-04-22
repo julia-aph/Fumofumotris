@@ -1,6 +1,5 @@
 #pragma once
 #include <iso646.h>
-#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -11,8 +10,8 @@
 #include "input.h"
 
 struct InputAxis {
-    struct Time last_pressed;
-    struct Time last_released;
+    Time last_pressed;
+    Time last_released;
 
     union {
         struct Button but;
@@ -46,15 +45,18 @@ struct ctrl_axis_vec {
 
 struct Controller {
     struct InputBuffer buf;
-    struct {
-        struct InputAxis *axes[IO_BUF_SIZE];
-        u16f len;
-    } pending_buf;
+    
+    struct InputAxis *pending_axes[IO_BUF_SIZE];
+    char string_input[IO_BUF_SIZE];
+    
+    u8f pending_axes_len;
+    u8f string_input_len;
 
     struct ctrl_axis_vec axis_vec;
     struct ctrl_dict codes;
     struct ctrl_dict binds;
 };
+size_t a = sizeof(struct Controller);
 
 bool CreateCtrl(struct Controller *ctrl);
 
@@ -64,7 +66,7 @@ bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind);
 
 struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type);
 
-bool CtrlPoll(struct Controller *ctrl);
+bool CtrlPoll(struct Controller *ctrl, struct InputThreadHandle *hand);
 
 enum ControlCode {
     LEFT,
