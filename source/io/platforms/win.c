@@ -88,7 +88,7 @@ bool copy_mouse_event(struct InputRecord *rec, MOUSE_EVENT_RECORD *win_mouse)
         return true;
     }
 
-    if (win_mouse->dwEventFlags & (MOUSE_WHEELED | MOUSE_HWHEELED) != 0) {
+    if ((win_mouse->dwEventFlags & (MOUSE_WHEELED | MOUSE_HWHEELED)) != 0) {
         rec->type = AXIS;
         rec->bind = win_mouse->dwEventFlags == MOUSE_WHEELED;
         rec->axis.value = win_mouse->dwButtonState;

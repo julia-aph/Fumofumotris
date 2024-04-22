@@ -29,26 +29,30 @@ void InputBufferAdd(struct InputBuffer *buf, struct InputRecord *rec)
     *buf_get(buf, buf->len++) = *rec;
 }
 
-void *input_thread_loop(struct InputThreadHandle *hand)
+void *input_thread_loop(void *arg)
 {
+    struct InputThreadHandle *hand = arg;
     struct InputBuffer tmp_buf = { .len = 0, .start = 0 };
 
     while (!hand->is_terminating) {
+        printf("\tinput cycle");
         if (!PlatformReadInput(&tmp_buf)) {
             hand->err = true;
-            return;
+            return nullptr;
         }
 
         hand->err = pthread_mutex_lock(&hand->mutex);
         if (hand->err)
-            return;
+            return nullptr;
 
         InputBufferTransfer(&tmp_buf, hand->buf);
 
         hand->err = pthread_mutex_unlock(&hand->mutex);
         if (hand->err)
-            return;
+            return nullptr;
     }
+
+    return nullptr;
 }
 
 bool BeginInputThread(struct InputThreadHandle *hand, struct InputBuffer *buf)

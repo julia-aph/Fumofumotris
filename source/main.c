@@ -33,7 +33,17 @@ int main()
     if (!BeginInputThread(&input, &ctrl.buf))
         ErrorExit("Input handle failed to initialize");
 
-    printf("woah");
+    CtrlMap(&ctrl, 0, BUTTON, 'A');
+
+    while (true) {
+        bool poll = CtrlPoll(&ctrl);
+        printf("poll: %u\n", poll);
+
+        struct InputAxis *a = CtrlGet(&ctrl, 0, BUTTON);
+        printf("get: %llu\n", a);
+
+        printf("val: %u\n", a->but.value);
+    }
 
     return 0;
 }
