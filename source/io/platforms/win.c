@@ -25,11 +25,11 @@ bool init_handles()
 
 bool init_console()
 {
-    DWORD mode = ENABLE_EXTENDED_FLAGS
-        | ENABLE_PROCESSED_INPUT
-        | ENABLE_PROCESSED_OUTPUT
-        | ENABLE_MOUSE_INPUT
-        | ENABLE_WINDOW_INPUT;
+    DWORD mode =  ENABLE_EXTENDED_FLAGS
+                | ENABLE_PROCESSED_INPUT
+                | ENABLE_PROCESSED_OUTPUT
+                | ENABLE_MOUSE_INPUT
+                | ENABLE_WINDOW_INPUT;
 
     return SetConsoleMode(win.input_hand, mode) != 0;
 }
@@ -58,72 +58,82 @@ bool PlatformGetRefreshRate(u16f *out)
     return true;
 }
 
-void read_key_event(struct InputRecord *rec, KEY_EVENT_RECORD *win_key)
-{
-    rec->type = BUTTON;
-    rec->bind = win_key->wVirtualKeyCode;
-
-    rec->is_down = win_key->bKeyDown;
-    rec->is_up = !win_key->bKeyDown;
+inline size_t ucs2_to_utf8(u16f ucs2, size_t n, char *buf) {
+    return WideCharToMultiByte(CP_UTF8, 0, ucs2, 1, buf, n, NULL, NULL);
 }
 
-bool read_mouse_event(struct InputRecord *rec, MOUSE_EVENT_RECORD *win_mouse)
-{
-    if (win_mouse->dwEventFlags == MOUSE_MOVED) {
-        rec->type = JOYSTICK;
-        rec->bind = 0;
-        rec->js.x = win_mouse->dwMousePosition.X;
-        rec->js.y = win_mouse->dwMousePosition.Y;
-        
-        return true;
-    }
+void read_key(
+    struct InputBuffer *in,
+    struct InputString *str,
+    KEY_EVENT_RECORD *key
+) {
+    struct InputRecord *rec = &in->buf[in->len++];
 
-    if ((win_mouse->dwEventFlags & (MOUSE_WHEELED | MOUSE_HWHEELED)) != 0) {
-        rec->type = AXIS;
-        rec->bind = win_mouse->dwEventFlags == MOUSE_WHEELED;
-        rec->axis.value = win_mouse->dwButtonState;
+    rec->id.type = BUTTON;
+    rec->id.bind = key->wVirtualKeyCode;
 
-        return true;
-    }
+    rec->is_down = key->bKeyDown;
+    rec->is_up = !key->bKeyDown;
 
-    return false;
+    ucs2_to_utf8(key->uChar.UnicodeChar, IO_BUF_SIZE - str->len, str->buf);
 }
 
-bool read_rec(struct InputRecord *rec, INPUT_RECORD *win_rec)
+bool is_mouse_wheel(DWORD event_flags) {
+    return (event_flags & (MOUSE_WHEELED | MOUSE_HWHEELED)) != 0;
+}
+
+void read_mouse(struct InputBuffer *in, MOUSE_EVENT_RECORD *mouse)
 {
-    switch (win_rec->EventType) {
+    if (mouse->dwEventFlags == MOUSE_MOVED) {
+        struct InputRecord *rec = &in->buf[in->len++];
+    
+        rec->id.type = JOYSTICK;
+        rec->id.bind = 0;
+        rec->js.x = mouse->dwMousePosition.X;
+        rec->js.y = mouse->dwMousePosition.Y;
+    } else if (is_mouse_wheel(mouse->dwEventFlags)) {
+        struct InputRecord *rec = &in->buf[in->len++];
+
+        rec->id.type = AXIS;
+        rec->id.bind = (mouse->dwEventFlags == MOUSE_WHEELED);
+        rec->axis.value = mouse->dwButtonState;
+    }
+}
+
+bool read_rec(
+    struct InputBuffer *in,
+    struct InputString *str,
+    INPUT_RECORD *rec
+) {
+    switch (rec->EventType) {
     case KEY_EVENT:
-        read_key_event(rec, &win_rec->Event.KeyEvent);
+        read_key(in, str, &rec->Event.KeyEvent);
         return true;
 
     case MOUSE_EVENT:
-        return read_mouse_event(rec, &win_rec->Event.MouseEvent);
+        read_mouse(in, &rec->Event.MouseEvent);
+        return true;
 
     case WINDOW_BUFFER_SIZE_EVENT:
-        return false;
+        return true;
         // TODO: Handle window resizing
     }
 
-    rec->type = ESCAPE;
     return false;
 }
 
-bool PlatformReadInput(struct InputBuffer *buf)
+bool PlatformReadInput(struct InputBuffer *in, struct InputString *str)
 {
-    DWORD max_records = IO_BUF_SIZE - buf->len;
+    DWORD max_records = IO_BUF_SIZE - in->len;
     INPUT_RECORD win_buf[max_records];
     DWORD filled;
 
     if (!ReadConsoleInputW(win.input_hand, win_buf, max_records, &filled))
         return false;
 
-    struct InputRecord rec = { .time = TimeNow() };
-
     for (size_t i = 0; i < filled; i++) {
-        if (!read_rec(&rec, win_buf + i))
-            continue;
-
-        InputBufferAdd(buf, &rec);
+        if (!read_rec(in, str, win_buf + i))
+            return false;
     }
 
     return true;

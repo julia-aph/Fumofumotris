@@ -10,6 +10,7 @@
 #include "gametime.h"
 
 #define IO_BUF_SIZE 16
+#define STR_BUF_SIZE (IO_BUF_SIZE * 4)
 
 enum InputType {
     BUTTON,
@@ -57,22 +58,36 @@ struct InputRecord {
         union InputData data;
     };
 
-    u16f bind;
+    union InputID id;
+    
+    struct {
+        u8f is_down : 1;
+        u8f is_held : 1;
+        u8f is_up : 1;
+    };
+};
 
-    u8 type;
-    u8 is_down;
-    u8 is_held;
-    u8 is_up;
+struct input_circ_buf {
+    u8f len;
+    u8f start;
 };
 
 struct InputBuffer {
-    struct InputRecord recs[IO_BUF_SIZE];
+    struct InputRecord buf[IO_BUF_SIZE];
+    u8f len;
+    u8f start;
+
+};
+
+struct InputString {
+    char buf[STR_BUF_SIZE];
     u8f len;
     u8f start;
 };
 
 struct InputThreadHandle {
-    struct InputBuffer *buf;
+    struct InputBuffer *in;
+    struct InputString *str;
 
     pthread_t thread;
     pthread_mutex_t mutex;

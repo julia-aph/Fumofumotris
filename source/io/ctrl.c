@@ -144,11 +144,7 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
     axis->data = rec->data;
 }
 
-bool is_alphanumeric(char c) {
-    return c >=32 and c <= 126;
-}
-
-bool read_input_buf(struct Controller *ctrl)
+void read_input_buf(struct Controller *ctrl)
 {
     for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
         struct InputAxis *axis = ctrl->pending_buf.axes[i];
@@ -159,10 +155,9 @@ bool read_input_buf(struct Controller *ctrl)
     ctrl->pending_buf.len = 0;
 
     for (size_t i = 0; i < ctrl->buf.len; i++) {
-        struct InputRecord *rec = &ctrl->buf.recs[i];
+        struct InputRecord *rec = &ctrl->buf.buf[i];
 
-        union InputID rec_id = to_id(rec->bind, rec->type);
-        struct InputAxis *axis = find_axis(&ctrl->binds, rec_id);
+        struct InputAxis *axis = find_axis(&ctrl->binds, rec->id);
         
         if (axis == nullptr)
             continue;
@@ -172,7 +167,11 @@ bool read_input_buf(struct Controller *ctrl)
     }
 
     ctrl->buf.len = 0;
-    return true;
+}
+
+void read_str_buf(struct Controller *ctrl)
+{
+    ctrl->string
 }
 
 bool CtrlPoll(struct Controller *ctrl, struct InputThreadHandle *hand)
@@ -181,6 +180,7 @@ bool CtrlPoll(struct Controller *ctrl, struct InputThreadHandle *hand)
         return false;   
     
     read_input_buf(ctrl);
+    read_str_buf(ctrl);
 
     if (pthread_cond_signal(&hand->buf_read) != 0)
         return false;
@@ -189,11 +189,6 @@ bool CtrlPoll(struct Controller *ctrl, struct InputThreadHandle *hand)
         return false;
     
     return true;
-}
-
-bool CtrlInputString(struct Controller *ctrl, size_t n, char *buf)
-{
-    
 }
 
 /*int main() 

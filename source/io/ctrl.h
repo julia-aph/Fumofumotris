@@ -21,9 +21,12 @@ struct InputAxis {
     };
 
     union InputID id;
-    u8 is_down;
-    u8 is_held;
-    u8 is_up;
+
+    struct {
+        u8f is_down : 1;
+        u8f is_held : 1;
+        u8f is_up : 1;
+    };
 };
 
 struct ctrl_bkt {
@@ -45,6 +48,7 @@ struct ctrl_axis_vec {
 
 struct Controller {
     struct InputBuffer buf;
+    struct InputString string;
     
     struct {
         struct InputAxis *axes[IO_BUF_SIZE];
