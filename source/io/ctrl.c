@@ -144,6 +144,10 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
     axis->data = rec->data;
 }
 
+bool is_alphanumeric(char c) {
+    return c >=32 and c <= 126;
+}
+
 bool read_input_buf(struct Controller *ctrl)
 {
     for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
@@ -153,7 +157,7 @@ bool read_input_buf(struct Controller *ctrl)
         axis->is_down = false;
     }
     ctrl->pending_buf.len = 0;
-    
+
     for (size_t i = 0; i < ctrl->buf.len; i++) {
         struct InputRecord *rec = &ctrl->buf.recs[i];
 
@@ -185,6 +189,11 @@ bool CtrlPoll(struct Controller *ctrl, struct InputThreadHandle *hand)
         return false;
     
     return true;
+}
+
+bool CtrlInputString(struct Controller *ctrl, size_t n, char *buf)
+{
+    
 }
 
 /*int main() 

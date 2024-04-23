@@ -46,17 +46,15 @@ struct ctrl_axis_vec {
 struct Controller {
     struct InputBuffer buf;
     
-    struct InputAxis *pending_axes[IO_BUF_SIZE];
-    char string_input[IO_BUF_SIZE];
-    
-    u8f pending_axes_len;
-    u8f string_input_len;
+    struct {
+        struct InputAxis *axes[IO_BUF_SIZE];
+        u8f len;
+    } pending_buf;
 
     struct ctrl_axis_vec axis_vec;
     struct ctrl_dict codes;
     struct ctrl_dict binds;
 };
-size_t a = sizeof(struct Controller);
 
 bool CreateCtrl(struct Controller *ctrl);
 
