@@ -75,14 +75,11 @@ struct input_circ_buf {
 struct InputBuffer {
     struct InputRecord buf[IO_BUF_SIZE];
     u8f len;
-    u8f start;
-
 };
 
 struct InputString {
     char buf[STR_BUF_SIZE];
     u8f len;
-    u8f start;
 };
 
 struct InputThreadHandle {
