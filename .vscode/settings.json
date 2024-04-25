@@ -54,6 +54,8 @@
         "stdbool.h": "c",
         "gametime.h": "c",
         "stdlib.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "platform.h": "c",
+        "ringbuffer.h": "c"
     }
 }

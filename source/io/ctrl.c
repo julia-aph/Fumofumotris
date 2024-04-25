@@ -1,7 +1,5 @@
 #include "ctrl.h"
 
-#include <pthread.h>
-
 #define INIT_SIZE 16
 
 bool CreateCtrl(struct Controller *ctrl)
@@ -14,7 +12,7 @@ bool CreateCtrl(struct Controller *ctrl)
         return false;
 
     *ctrl = (struct Controller) {
-        .buf.len = 0,
+        .recs.len = 0,
         .pending_buf.len = 0,
 
         .axis_vec = (struct ctrl_axis_vec) {
@@ -144,7 +142,7 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
     axis->data = rec->data;
 }
 
-void read_input_buf(struct Controller *ctrl)
+void CtrlPoll(struct Controller *ctrl)
 {
     for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
         struct InputAxis *axis = ctrl->pending_buf.axes[i];
@@ -154,8 +152,8 @@ void read_input_buf(struct Controller *ctrl)
     }
     ctrl->pending_buf.len = 0;
 
-    for (size_t i = 0; i < ctrl->buf.len; i++) {
-        struct InputRecord *rec = &ctrl->buf.buf[i];
+    for (size_t i = 0; i < ctrl->recs.len; i++) {
+        struct InputRecord *rec = &ctrl->recs.buf[i];
 
         struct InputAxis *axis = find_axis(&ctrl->binds, rec->id);
         
@@ -166,29 +164,12 @@ void read_input_buf(struct Controller *ctrl)
         ctrl->pending_buf.axes[ctrl->pending_buf.len++] = axis;
     }
 
-    ctrl->buf.len = 0;
+    ctrl->recs.len = 0;
 }
 
-void read_str_buf(struct Controller *ctrl)
+size_t CtrlInputString(struct Controller *ctrl, size_t n, char *buf)
 {
-    ctrl->string
-}
-
-bool CtrlPoll(struct Controller *ctrl, struct InputThreadHandle *hand)
-{
-    if (pthread_mutex_lock(&hand->mutex) != 0)
-        return false;   
-    
-    read_input_buf(ctrl);
-    read_str_buf(ctrl);
-
-    if (pthread_cond_signal(&hand->buf_read) != 0)
-        return false;
-
-    if (pthread_mutex_unlock(&hand->mutex) != 0)
-        return false;
-    
-    return true;
+    size_t copy_max = min_size(ctrl->str.len, n);
 }
 
 /*int main() 

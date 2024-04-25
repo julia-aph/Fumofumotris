@@ -3,82 +3,82 @@
 
 #include "platform.h"
 
-inline size_t min_size(size_t a, size_t b) {
-    return a < b ? a : b;
-}
-
-void InputBufferTransfer(struct InputBuffer *dest, struct InputBuffer *src)
+void InputBufferTransfer(struct RecordBuffer *dest, struct RecordBuffer *src)
 {
-    size_t copy_amt = min_size(IO_BUF_SIZE - dest->len, src->len);
+    size_t copy_max = min_size(IO_BUF_SIZE - dest->len, src->len);
 
-    for (size_t i = 0; i < dest->start; i++) {
+    for (size_t i = 0; i < copy_max; i++) {
         size_t dest_i = (dest->start + dest->len + i) % IO_BUF_SIZE;
         size_t src_i = (src->start + i) % IO_BUF_SIZE;
 
         dest->buf[dest_i] = src->buf[src_i];
     }
 
-    dest->start += copy_amt;
-    if (copy_amt < src->len)
-        src->len -= copy_amt;
+    dest->start += copy_max;
+    if (copy_max < src->len)
+        src->len -= copy_max;
 }
 
-void InputStringTransfer(struct InputString *dest, struct InputString *src)
+void StringBufferTransfer(struct StringBuffer *dest, struct StringBuffer *src)
 {
-    size_t copy_amt = min_size(STR_BUF_SIZE - dest->len, src->len);
+    size_t copy_max = min_size(STR_BUF_SIZE - dest->len, src->len);
 
-    for (size_t i = 0; i < copy_amt; i++) {
+    for (size_t i = 0; i < copy_max; i++) {
         size_t dest_i = (dest->start + dest->len + i) % STR_BUF_SIZE;
         size_t src_i = (src->start + i) % STR_BUF_SIZE;
 
         dest->buf[dest_i] = src->buf[src_i];
     }
 
-    dest->start += copy_amt;
-    if (copy_amt < src->len)
-        src->len -= copy_amt;
+    dest->start += copy_max;
+    if (copy_max < src->len)
+        src->len -= copy_max;
 }
 
 void *input_thread_loop(void *arg)
 {
     struct InputThreadHandle *hand = arg;
 
-    struct InputBuffer tmp_in = { .len = 0 };
-    struct InputString tmp_str = { .len = 0 };
+    struct RecordBuffer tmp_in = { .len = 0, .start = 0 };
+    struct StringBuffer tmp_str = { .len = 0, .start = 0 };
 
     while (!hand->is_terminating) {
-        if (!PlatformReadInput(&tmp_in, &tmp_str)) {
-            hand->err = true;
+        if (!PlatformReadInput(&tmp_in, &tmp_str))
             return nullptr;
-        }
 
-        hand->err = pthread_mutex_lock(&hand->mutex);
-        if (hand->err)
+        if (hand->err = pthread_mutex_lock(&hand->mutex))
             return nullptr;
 
         while (tmp_in.len == IO_BUF_SIZE) {
-            hand->err = pthread_cond_wait(&hand->buf_read, &hand->mutex);
-            if (hand->err)
+            if (hand->err = pthread_cond_wait(&hand->consume, &hand->mutex))
                 return nullptr;
         }
 
         InputBufferTransfer(hand->in, &tmp_in);
-        InputStringTransfer(hand->str, &tmp_str);
+        StringBufferTransfer(hand->str, &tmp_str);
 
-        hand->err = pthread_mutex_unlock(&hand->mutex);
-        if (hand->err)
+        if (hand->err = pthread_mutex_unlock(&hand->mutex))
             return nullptr;
     }
 
     return nullptr;
 }
 
-bool BeginInputThread(struct InputThreadHandle *hand, struct InputBuffer *buf)
-{
-    hand->in = buf;
-    hand->mutex = PTHREAD_MUTEX_INITIALIZER;
-    hand->buf_read = PTHREAD_COND_INITIALIZER;
-    hand->err = 0;
+bool BeginInputThread(
+    struct InputThreadHandle *hand,
+    struct RecordBuffer *in,
+    struct StringBuffer *str
+) {
+    *hand = (struct InputThreadHandle) {
+        .in = in,
+        .str = str,
+        
+        .mutex = PTHREAD_MUTEX_INITIALIZER,
+        .consume = PTHREAD_COND_INITIALIZER,
+
+        .err = 0,
+        .is_terminating = false,
+    };
 
     return pthread_create(&hand->thread, nullptr, input_thread_loop, hand) == 0;
 }

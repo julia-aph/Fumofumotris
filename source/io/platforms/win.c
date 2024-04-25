@@ -20,6 +20,37 @@ struct win_coord {
     SHORT y;
 };
 
+struct win_key {
+    BOOL is_down;
+    WORD repeat;
+    WORD vk_code;
+    WORD vs_code;
+    WCHAR ucs2_char;
+    DWORD state;
+};
+
+struct win_mouse {
+    struct win_coord pos;
+    DWORD but;
+    DWORD state;
+
+    union {
+        DWORD flags;
+
+        struct {
+            DWORD is_moved : 1;
+            DWORD is_dbl_clk : 1;
+            DWORD is_vwheel : 1;
+            DWORD is_hwheel : 1;
+        };
+
+        struct {
+            DWORD : 2;
+            DWORD wheel : 2;
+        };
+    };
+};
+
 struct win_rec {
     union {
         WORD type;
@@ -34,37 +65,8 @@ struct win_rec {
     };
 
     union {
-        struct {
-            BOOL is_down;
-            WORD repeat;
-            WORD vk_code;
-            WORD vs_code;
-            WCHAR ucs2_char;
-            DWORD state;
-        } key;
-
-        struct {
-            struct win_coord pos;
-            DWORD but;
-            DWORD state;
-
-            union {
-                DWORD flags;
-
-                struct {
-                    DWORD is_moved : 1;
-                    DWORD is_dbl_clk : 1;
-                    DWORD is_vwheel : 1;
-                    DWORD is_hwheel : 1;
-                };
-
-                struct {
-                    DWORD : 2;
-                    DWORD wheel : 2;
-                };
-            };
-        } mouse;
-
+        struct win_key key;
+        struct win_mouse mouse;
         struct win_coord window;
     };
 };
@@ -117,47 +119,26 @@ bool PlatformGetRefreshRate(u16f *out)
     return true;
 }
 
-size_t ucs2_to_utf8(char *buf, u16f ucs2)
-{
-    if (ucs2 < 0xFF) {
-        buf[0] = ucs2;
-        return 1;
-    }
-
-    if (ucs2 < 0x7FF) {
-        buf[0] = 0xC0 + (ucs2 >> 6);
-        buf[1] = 0x80 + (ucs2 & 0x3F);
-        return 2;
-    }
-
-    buf[0] = 0xE0 + (ucs2 >> 12);
-    buf[1] = 0x80 + ((ucs2 >> 6) & 0x3F);
-    buf[2] = 0x80 + (ucs2 & 0x3F);
-    return 3;
-}
-
-inline u8f win_rec_type(struct win_rec *rec) {
-    return rec->type | (rec->is_mouse & rec->mouse.flags);
-}
-
-bool read_rec(
+bool dispatch_rec(
     struct InputRecord *out,
-    struct InputString *str,
-    struct win_rec *in
+    struct StringBuffer *str,
+    struct win_rec *rec
 ) {
-    switch (win_rec_type(in)) {
+    u8f type = rec->type | (rec->is_mouse & rec->mouse.flags);
+
+    switch (type) {
     case KEY_EVENT:
-        ParseButton(out, in->key.vk_code, in->key.is_down);
-        str->len += ucs2_to_utf8(&str->buf[str->len], in->key.ucs2_char);
+        ReadButton(out, rec->key.vk_code, rec->key.is_down);
+        str->len += UCS2ToUTF8(&str->buf[str->len], rec->key.ucs2_char);
         return true;
 
     case MOUSE_MOVE:
-        ParseJoystick(out, 0, in->mouse.pos.x, in->mouse.pos.y);
+        ReadJoystick(out, 0, rec->mouse.pos.x, rec->mouse.pos.y);
         return true;
 
     case MOUSE_VWHEEL:
     case MOUSE_HWHEEL:
-        ParseAxis(out, in->mouse.is_hwheel, in->mouse.but);
+        ReadAxis(out, rec->mouse.is_hwheel, rec->mouse.but);
         return true;
         
     case WINDOW_BUFFER_SIZE_EVENT:
@@ -168,7 +149,7 @@ bool read_rec(
     return false;
 }
 
-bool PlatformReadInput(struct InputBuffer *in, struct InputString *str)
+bool PlatformReadInput(struct RecordBuffer *in, struct StringBuffer *str)
 {
     DWORD max_records = IO_BUF_SIZE - in->len;
     struct win_rec win_buf[max_records];
@@ -177,9 +158,16 @@ bool PlatformReadInput(struct InputBuffer *in, struct InputString *str)
     if (!ReadConsoleInputW(win.input_hand, win_buf, max_records, &filled))
         return false;
 
+    Time now = TimeNow();
+
     for (size_t i = 0; i < filled; i++) {
-        if (read_rec(in, str, win_buf + i))
+        size_t rec_i = (in->start + in->len) % IO_BUF_SIZE;
+        struct InputRecord *rec = &in->buf[rec_i];
+        
+        if (dispatch_rec(rec, str, win_buf + i)) {
+            rec->time = now;
             in->len += 1;
+        }
     }
 
     return true;

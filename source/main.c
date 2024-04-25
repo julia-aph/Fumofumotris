@@ -40,7 +40,7 @@ int main()
     CreateEvent(&game.Update);
 
     struct InputThreadHandle input_hand;
-    if (!BeginInputThread(&input_hand, &ctrl.buf))
+    if (!BeginInputThread(&input_hand, &ctrl.recs, &ctrl.str))
         ErrorExit("Input handle failed to initialize");
 
     CtrlMap(&ctrl, 0, BUTTON, 'A');

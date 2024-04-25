@@ -28,6 +28,8 @@ typedef int_fast32_t   i32f;
 typedef int64_t        i64;
 typedef int_fast64_t   i64f;
 
+inline size_t min_size(size_t a, size_t b);
+
 /*const u8 I[16] = {
     0, 0, 0, 0,
     0, 0, 0, 0,

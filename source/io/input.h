@@ -67,34 +67,36 @@ struct InputRecord {
     };
 };
 
-struct InputBuffer {
+struct RecordBuffer {
     struct InputRecord buf[IO_BUF_SIZE];
     u8f len;
     u8f start;
 };
 
-struct InputString {
+struct StringBuffer {
     char buf[STR_BUF_SIZE];
     u8f len;
     u8f start;
 };
 
 struct InputThreadHandle {
-    struct InputBuffer *in;
-    struct InputString *str;
+    struct RecordBuffer *in;
+    struct StringBuffer *str;
 
     pthread_t thread;
     pthread_mutex_t mutex;
-    pthread_cond_t buf_read;
+    pthread_cond_t consume;
 
     int err;
     bool is_terminating;
 };
 
-void InputBufferTransfer(struct InputBuffer *tmp, struct InputBuffer *dest);
+void InputBufferTransfer(struct RecordBuffer *tmp, struct RecordBuffer *dest);
 
-void InputBufferAdd(struct InputBuffer *buf, struct InputRecord *src);
-
-bool BeginInputThread(struct InputThreadHandle *hand, struct InputBuffer *buf);
+bool BeginInputThread(
+    struct InputThreadHandle *hand,
+    struct RecordBuffer *in,
+    struct StringBuffer *str
+);
 
 bool EndInputThread(struct InputThreadHandle *hand);
