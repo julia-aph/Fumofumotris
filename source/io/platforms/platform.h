@@ -16,7 +16,7 @@ bool PlatformInit();
 
 bool PlatformGetRefreshRate(u16f *out);
 
-bool PlatformReadInput(struct RecordBuffer *in, struct StringBuffer *str);
+bool PlatformReadInput(struct InputRecordBuf *in, struct InputStringBuf *str);
 
 bool PlatformStopInput();
 

@@ -8,6 +8,7 @@
 
 #include "fumotris.h"
 #include "gametime.h"
+#include "ringbuffer.h"
 
 #define IO_BUF_SIZE 16
 #define STR_BUF_SIZE (IO_BUF_SIZE * 4)
@@ -67,21 +68,22 @@ struct InputRecord {
     };
 };
 
-struct RecordBuffer {
+RingBufferT IO_BUF_T = INIT_RING_BUF_T(IO_BUF_SIZE, struct InputRecord);
+RingBufferT STR_BUF_T = INIT_RING_BUF_T(STR_BUF_SIZE, char);
+
+struct InputRecordBuf {
+    struct RingBufferHead head;
     struct InputRecord buf[IO_BUF_SIZE];
-    u8f len;
-    u8f start;
 };
 
-struct StringBuffer {
+struct InputStringBuf {
+    struct RingBufferHead head;
     char buf[STR_BUF_SIZE];
-    u8f len;
-    u8f start;
 };
 
 struct InputThreadHandle {
-    struct RecordBuffer *in;
-    struct StringBuffer *str;
+    struct InputRecordBuf *in;
+    struct InputStringBuf *str;
 
     pthread_t thread;
     pthread_mutex_t mutex;
@@ -91,12 +93,10 @@ struct InputThreadHandle {
     bool is_terminating;
 };
 
-void InputBufferTransfer(struct RecordBuffer *tmp, struct RecordBuffer *dest);
-
 bool BeginInputThread(
     struct InputThreadHandle *hand,
-    struct RecordBuffer *in,
-    struct StringBuffer *str
+    struct InputRecordBuf *in,
+    struct InputStringBuf *str
 );
 
 bool EndInputThread(struct InputThreadHandle *hand);

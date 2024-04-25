@@ -3,44 +3,12 @@
 
 #include "platform.h"
 
-void InputBufferTransfer(struct RecordBuffer *dest, struct RecordBuffer *src)
-{
-    size_t copy_max = min_size(IO_BUF_SIZE - dest->len, src->len);
-
-    for (size_t i = 0; i < copy_max; i++) {
-        size_t dest_i = (dest->start + dest->len + i) % IO_BUF_SIZE;
-        size_t src_i = (src->start + i) % IO_BUF_SIZE;
-
-        dest->buf[dest_i] = src->buf[src_i];
-    }
-
-    dest->start += copy_max;
-    if (copy_max < src->len)
-        src->len -= copy_max;
-}
-
-void StringBufferTransfer(struct StringBuffer *dest, struct StringBuffer *src)
-{
-    size_t copy_max = min_size(STR_BUF_SIZE - dest->len, src->len);
-
-    for (size_t i = 0; i < copy_max; i++) {
-        size_t dest_i = (dest->start + dest->len + i) % STR_BUF_SIZE;
-        size_t src_i = (src->start + i) % STR_BUF_SIZE;
-
-        dest->buf[dest_i] = src->buf[src_i];
-    }
-
-    dest->start += copy_max;
-    if (copy_max < src->len)
-        src->len -= copy_max;
-}
-
 void *input_thread_loop(void *arg)
 {
     struct InputThreadHandle *hand = arg;
 
-    struct RecordBuffer tmp_in = { .len = 0, .start = 0 };
-    struct StringBuffer tmp_str = { .len = 0, .start = 0 };
+    struct InputRecordBuf tmp_in = { .head.len = 0, .head.start = 0 };
+    struct InputStringBuf tmp_str = { .head.len = 0, .head.start = 0 };
 
     while (!hand->is_terminating) {
         if (!PlatformReadInput(&tmp_in, &tmp_str))
@@ -49,13 +17,13 @@ void *input_thread_loop(void *arg)
         if (hand->err = pthread_mutex_lock(&hand->mutex))
             return nullptr;
 
-        while (tmp_in.len == IO_BUF_SIZE) {
+        while (tmp_in.head.len == IO_BUF_SIZE) {
             if (hand->err = pthread_cond_wait(&hand->consume, &hand->mutex))
                 return nullptr;
         }
 
-        InputBufferTransfer(hand->in, &tmp_in);
-        StringBufferTransfer(hand->str, &tmp_str);
+        RingBufferTransfer(IO_BUF_T, hand->in, &tmp_in);
+        RingBufferTransfer(STR_BUF_T, hand->str, &tmp_str);
 
         if (hand->err = pthread_mutex_unlock(&hand->mutex))
             return nullptr;
@@ -66,8 +34,8 @@ void *input_thread_loop(void *arg)
 
 bool BeginInputThread(
     struct InputThreadHandle *hand,
-    struct RecordBuffer *in,
-    struct StringBuffer *str
+    struct InputRecordBuf *in,
+    struct InputStringBuf *str
 ) {
     *hand = (struct InputThreadHandle) {
         .in = in,

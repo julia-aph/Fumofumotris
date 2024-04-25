@@ -47,8 +47,8 @@ struct ctrl_axis_vec {
 };
 
 struct Controller {
-    struct RecordBuffer recs;
-    struct StringBuffer str;
+    struct InputRecordBuf recs;
+    struct InputStringBuf str;
     
     struct {
         struct InputAxis *axes[IO_BUF_SIZE];

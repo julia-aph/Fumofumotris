@@ -121,7 +121,7 @@ bool PlatformGetRefreshRate(u16f *out)
 
 bool dispatch_rec(
     struct InputRecord *out,
-    struct StringBuffer *str,
+    struct InputStringBuf *str,
     struct win_rec *rec
 ) {
     u8f type = rec->type | (rec->is_mouse & rec->mouse.flags);
@@ -149,7 +149,7 @@ bool dispatch_rec(
     return false;
 }
 
-bool PlatformReadInput(struct RecordBuffer *in, struct StringBuffer *str)
+bool PlatformReadInput(struct InputRecordBuf *in, struct InputStringBuf *str)
 {
     DWORD max_records = IO_BUF_SIZE - in->len;
     struct win_rec win_buf[max_records];
