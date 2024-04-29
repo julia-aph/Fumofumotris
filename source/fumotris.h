@@ -1,7 +1,9 @@
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 
-#define nullptr ((void*)0)
+#define nullptr ((void *)0)
+
 
 typedef uint8_t         u8;
 typedef uint_fast8_t    u8f;
@@ -28,7 +30,9 @@ typedef int_fast32_t   i32f;
 typedef int64_t        i64;
 typedef int_fast64_t   i64f;
 
-inline size_t min_size(size_t a, size_t b);
+
+size_t min_size(size_t a, size_t b);
+
 
 /*const u8 I[16] = {
     0, 0, 0, 0,

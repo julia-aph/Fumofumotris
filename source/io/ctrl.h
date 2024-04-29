@@ -68,7 +68,9 @@ bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind);
 
 struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type);
 
-bool CtrlPoll(struct Controller *ctrl, struct InputThreadHandle *hand);
+void CtrlPoll(struct Controller *ctrl);
+
+size_t CtrlInputString(struct Controller *ctrl, size_t n, char *buf);
 
 enum ControlCode {
     LEFT,

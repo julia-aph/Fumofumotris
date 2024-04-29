@@ -1,5 +1,7 @@
 #include "ctrl.h"
 
+#include "ringbuffer.h"
+
 #define INIT_SIZE 16
 
 bool CreateCtrl(struct Controller *ctrl)
@@ -12,7 +14,7 @@ bool CreateCtrl(struct Controller *ctrl)
         return false;
 
     *ctrl = (struct Controller) {
-        .recs.len = 0,
+        .recs.head = RINGBUF_HEAD_INIT,
         .pending_buf.len = 0,
 
         .axis_vec = (struct ctrl_axis_vec) {
@@ -49,7 +51,7 @@ size_t wrap_index(size_t i, size_t max) {
     return i % (SIZE_MAX - max + 1);
 }
 
-struct ctrl_bkt *find_or_set(struct ctrl_dict *dict, union InputID id)
+struct ctrl_bkt *find_set(struct ctrl_dict *dict, union InputID id)
 {
     size_t i = id.hash % dict->capacity;
 
@@ -99,14 +101,14 @@ struct InputAxis *find_axis(struct ctrl_dict *dict, union InputID id)
     return bkt->axis;
 }
 
-union InputID to_id(u16f value, u16f type) {
+union InputID as_id(u16f value, u16f type) {
     return (union InputID) { .value = value, .type = type };
 }
 
 bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind)
 {
-    struct ctrl_bkt *code_bkt = find_or_set(&ctrl->codes, to_id(code, type));
-    struct ctrl_bkt *bind_bkt = find_or_set(&ctrl->binds, to_id(bind, type));
+    struct ctrl_bkt *code_bkt = find_set(&ctrl->codes, as_id(code, type));
+    struct ctrl_bkt *bind_bkt = find_set(&ctrl->binds, as_id(bind, type));
     
     if (code_bkt->axis == nullptr)
         code_bkt->axis = &ctrl->axis_vec.axes[ctrl->axis_vec.len++];
@@ -120,7 +122,7 @@ bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind)
 
 struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type)
 {
-    struct ctrl_bkt *code_bkt = find(&ctrl->codes, to_id(code, type));
+    struct ctrl_bkt *code_bkt = find(&ctrl->codes, as_id(code, type));
     if (code_bkt == nullptr)
         return nullptr;
 
@@ -152,7 +154,7 @@ void CtrlPoll(struct Controller *ctrl)
     }
     ctrl->pending_buf.len = 0;
 
-    for (size_t i = 0; i < ctrl->recs.len; i++) {
+    for (size_t i = 0; i < ctrl->recs.head.len; i++) {
         struct InputRecord *rec = &ctrl->recs.buf[i];
 
         struct InputAxis *axis = find_axis(&ctrl->binds, rec->id);
@@ -164,12 +166,12 @@ void CtrlPoll(struct Controller *ctrl)
         ctrl->pending_buf.axes[ctrl->pending_buf.len++] = axis;
     }
 
-    ctrl->recs.len = 0;
+    ctrl->recs.head.len = 0;
 }
 
 size_t CtrlInputString(struct Controller *ctrl, size_t n, char *buf)
 {
-    size_t copy_max = min_size(ctrl->str.len, n);
+    return RingBufferOut(&STR_BUF_T, n, buf, &ctrl->str.head);
 }
 
 /*int main() 

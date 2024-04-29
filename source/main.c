@@ -36,20 +36,27 @@ int main()
     if (!CreateCtrl(&ctrl))
         ErrorExit("Out of memory");
 
+    CtrlMap(&ctrl, 0, BUTTON, 'A');
+
     struct Game game;
     CreateEvent(&game.Update);
 
-    struct InputThreadHandle input_hand;
+    struct InputHandle input_hand;
     if (!BeginInputThread(&input_hand, &ctrl.recs, &ctrl.str))
         ErrorExit("Input handle failed to initialize");
 
-    CtrlMap(&ctrl, 0, BUTTON, 'A');
-
+    _sleep(1000000);
     while (true) {
-        if(!CtrlPoll(&ctrl, &input_hand))
-            ErrorExit("Poll failed");
+        if (!InputAquire(&input_hand))
+            ErrorExit("Aquire failed");
+            
+        //printf("%u\n", ctrl.recs.head.len);
+        //CtrlPoll(&ctrl);
 
-        EventInvokeUpdate(&game.Update, nullptr);
+        if (!InputRelease(&input_hand))
+            ErrorExit("Release failed");
+
+        EventInvokeUpdate(&game.Update, 0);
     }
 
     return 0;

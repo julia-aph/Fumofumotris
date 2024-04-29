@@ -68,8 +68,8 @@ struct InputRecord {
     };
 };
 
-RingBufferT IO_BUF_T = INIT_RING_BUF_T(IO_BUF_SIZE, struct InputRecord);
-RingBufferT STR_BUF_T = INIT_RING_BUF_T(STR_BUF_SIZE, char);
+extern const struct RingBufferT IO_BUF_T;
+extern const struct RingBufferT STR_BUF_T;
 
 struct InputRecordBuf {
     struct RingBufferHead head;
@@ -81,22 +81,26 @@ struct InputStringBuf {
     char buf[STR_BUF_SIZE];
 };
 
-struct InputThreadHandle {
-    struct InputRecordBuf *in;
+struct InputHandle {
+    struct InputRecordBuf *recs;
     struct InputStringBuf *str;
 
     pthread_t thread;
     pthread_mutex_t mutex;
-    pthread_cond_t consume;
+    pthread_cond_t is_consumed;
 
     int err;
     bool is_terminating;
 };
 
 bool BeginInputThread(
-    struct InputThreadHandle *hand,
+    struct InputHandle *hand,
     struct InputRecordBuf *in,
     struct InputStringBuf *str
 );
 
-bool EndInputThread(struct InputThreadHandle *hand);
+bool EndInputThread(struct InputHandle *hand);
+
+bool InputAquire(struct InputHandle *hand);
+
+bool InputRelease(struct InputHandle *hand);

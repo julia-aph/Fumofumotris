@@ -5,6 +5,7 @@
 #include "gametime.h"
 #include "input.h"
 #include "parseinput.h"
+#include "ringbuffer.h"
 
 #define MOUSE_MOVE (MOUSE_EVENT | MOUSE_MOVED)
 #define MOUSE_VWHEEL (MOUSE_EVENT | MOUSE_WHEELED)
@@ -71,6 +72,11 @@ struct win_rec {
     };
 };
 
+union record {
+    struct win_rec native;
+    INPUT_RECORD win;
+};
+
 bool init_handles()
 {
     win.input_hand = GetStdHandle(STD_INPUT_HANDLE);
@@ -127,46 +133,56 @@ bool dispatch_rec(
     u8f type = rec->type | (rec->is_mouse & rec->mouse.flags);
 
     switch (type) {
-    case KEY_EVENT:
-        ReadButton(out, rec->key.vk_code, rec->key.is_down);
-        str->len += UCS2ToUTF8(&str->buf[str->len], rec->key.ucs2_char);
-        return true;
+        case KEY_EVENT: {
+            ReadButton(out, rec->key.vk_code, rec->key.is_down);
 
-    case MOUSE_MOVE:
-        ReadJoystick(out, 0, rec->mouse.pos.x, rec->mouse.pos.y);
-        return true;
+            char *to = RingBufferGet(&STR_BUF_T, &str->head, str->head.len);
+            str->head.len += UCS2ToUTF8(to, rec->key.ucs2_char);
 
-    case MOUSE_VWHEEL:
-    case MOUSE_HWHEEL:
-        ReadAxis(out, rec->mouse.is_hwheel, rec->mouse.but);
-        return true;
-        
-    case WINDOW_BUFFER_SIZE_EVENT:
-        return false;
-        // TODO: Handle window resizing
+            return true;
+        }
+        case MOUSE_MOVE: {
+            ReadJoystick(out, 0, rec->mouse.pos.x, rec->mouse.pos.y);
+
+            return true;
+        }
+        case MOUSE_VWHEEL: {
+            ReadAxis(out, 0, rec->mouse.but);
+
+            return true;
+        }
+        case MOUSE_HWHEEL: {
+            ReadAxis(out, 1, rec->mouse.but);
+
+            return true;
+        }
+        case WINDOW_BUFFER_SIZE_EVENT: {
+            // TODO: Handle window resizing
+            
+            return false;
+        }
     }
 
     return false;
 }
 
-bool PlatformReadInput(struct InputRecordBuf *in, struct InputStringBuf *str)
+bool PlatformReadInput(struct InputRecordBuf *recs, struct InputStringBuf *str)
 {
-    DWORD max_records = IO_BUF_SIZE - in->len;
-    struct win_rec win_buf[max_records];
+    DWORD read_max = RingBufferEmpty(&IO_BUF_T, &recs->head);
+    union record win_buf[read_max];
     DWORD filled;
 
-    if (!ReadConsoleInputW(win.input_hand, win_buf, max_records, &filled))
+    if (!ReadConsoleInputW(win.input_hand, &win_buf->win, read_max, &filled))
         return false;
 
     Time now = TimeNow();
 
     for (size_t i = 0; i < filled; i++) {
-        size_t rec_i = (in->start + in->len) % IO_BUF_SIZE;
-        struct InputRecord *rec = &in->buf[rec_i];
+        struct InputRecord *rec = RingBufferNext(&IO_BUF_T, &recs->head);
         
-        if (dispatch_rec(rec, str, win_buf + i)) {
+        if (dispatch_rec(rec, str, &win_buf->native + i)) {
             rec->time = now;
-            in->len += 1;
+            recs->head.len += 1;
         }
     }
 
