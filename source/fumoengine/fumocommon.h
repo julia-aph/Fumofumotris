@@ -1,8 +1,9 @@
 #pragma once
-#include <stddef.h>
 #include <stdint.h>
 
 #define nullptr ((void *)0)
+
+#define ONE_E_9 1000000000
 
 
 typedef uint8_t         u8;
@@ -31,47 +32,11 @@ typedef int64_t        i64;
 typedef int_fast64_t   i64f;
 
 
-size_t min_size(size_t a, size_t b);
+typedef u64 Time;
 
 
-/*const u8 I[16] = {
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    1, 1, 1, 1,
-    0, 0, 0, 0
-};
+size_t MinSize(size_t a, size_t b);
 
-const u8 O[4] = {
-    1, 1,
-    1, 1
-};
+Time TimeNow();
 
-const u8 T[9] = {
-    0, 1, 0,
-    1, 1, 1,
-    0, 0, 0
-};
-
-const u8 S[9] = {
-    0, 1, 1,
-    1, 1, 0,
-    0, 0, 0
-};
-
-const u8 Z[9] = {
-    1, 1, 0,
-    0, 1, 1,
-    0, 0, 0
-};
-
-const u8 J[9] = {
-    1, 0, 0,
-    1, 1, 1,
-    0, 0, 0
-};
-
-const u8 L[9] = {
-    0, 0, 1,
-    1, 1, 1,
-    0, 0, 0
-};*/
+double TimeNowD();

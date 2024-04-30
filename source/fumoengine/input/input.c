@@ -3,6 +3,7 @@
 
 #include "platform.h"
 
+
 const struct RingBufferT IO_BUF_T = {
     .OFFSET = offsetof(struct InputRecordBuf, buf),
     .SIZE = sizeof(struct InputRecord),
@@ -14,6 +15,7 @@ const struct RingBufferT STR_BUF_T = {
     .SIZE = sizeof(char),
     .LEN = STR_BUF_SIZE
 };
+
 
 void *input_worker(void *arg)
 {
@@ -110,4 +112,9 @@ bool InputRelease(struct InputHandle *hand)
         return false;
 
     return true;
+}
+
+size_t InputString(struct InputStringBuf *str, size_t n, char *buf)
+{
+    return RingBufferOut(&STR_BUF_T, n, buf, &str->head);
 }

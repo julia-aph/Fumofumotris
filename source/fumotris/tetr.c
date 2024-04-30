@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "fumotris.h"
+#include "fumocommon.h"
 #include "term.h"
+
 
 struct TetrMap {
     size_t wid;

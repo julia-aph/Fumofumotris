@@ -5,12 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "fumotris.h"
-#include "gametime.h"
+#include "fumocommon.h"
 
 #ifdef _WIN32
     #include "win.h"
 #endif
+
 
 bool PlatformInit();
 

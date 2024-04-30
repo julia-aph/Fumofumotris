@@ -4,8 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "fumotris.h"
+#include "fumocommon.h"
 #include "input.h"
+
 
 void ReadButton(struct InputRecord *rec, u16f bind, bool is_down);
 

@@ -57,7 +57,8 @@
 			"streambuf": "cpp",
 			"typeinfo": "cpp",
 			"execution": "cpp",
-			"stdbool.h": "c"
+			"stdbool.h": "c",
+			"fumoengine.h": "c"
 		}
 	}
 }

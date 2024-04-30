@@ -1,5 +1,7 @@
 #include "ringbuffer.h"
+
 #include <string.h>
+
 
 void *get_ptr(RingBufferT T, struct RingBufferHead *head, size_t i)
 {
@@ -35,7 +37,7 @@ void RingBufferTransfer(
     struct RingBufferHead *dest,
     struct RingBufferHead *tmp
 ) {
-    size_t copy_max = min_size(T->LEN - dest->len, tmp->len);
+    size_t copy_max = MinSize(T->LEN - dest->len, tmp->len);
 
     for (size_t i = 0; i < copy_max; i++) {
         void *to = RingBufferGet(T, dest, dest->len + i);
@@ -53,7 +55,7 @@ size_t RingBufferOut(
     void *dest,
     struct RingBufferHead *src
 ) {
-    size_t copy_max = min_size(n, src->len);
+    size_t copy_max = MinSize(n, src->len);
 
     for (size_t i = 0; i < copy_max; i++) {
         void *to = (u8 *)dest + i * T->SIZE;

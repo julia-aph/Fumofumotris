@@ -6,12 +6,16 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "fumotris.h"
-#include "gametime.h"
+#include "fumocommon.h"
 #include "ringbuffer.h"
 
 #define IO_BUF_SIZE 16
 #define STR_BUF_SIZE (IO_BUF_SIZE * 4)
+
+
+extern const struct RingBufferT IO_BUF_T;
+extern const struct RingBufferT STR_BUF_T;
+
 
 enum InputType {
     BUTTON,
@@ -32,12 +36,15 @@ union InputID {
     u32 hash;
 };
 
+
 struct Button {
     u64 value;
 };
+
 struct Axis {
     i64 value;
 };
+
 struct Joystick {
     i32 x;
     i32 y;
@@ -48,6 +55,7 @@ union InputData {
     struct Axis input_axis;
     struct Joystick input_js;
 };
+
 
 struct InputRecord {
     Time time;
@@ -68,22 +76,20 @@ struct InputRecord {
     };
 };
 
-extern const struct RingBufferT IO_BUF_T;
-extern const struct RingBufferT STR_BUF_T;
+struct InputBuffer {
+    struct {
+        struct RingBufferHead head;
+        struct InputRecord buf[IO_BUF_SIZE];
+    } recs;
 
-struct InputRecordBuf {
-    struct RingBufferHead head;
-    struct InputRecord buf[IO_BUF_SIZE];
-};
-
-struct InputStringBuf {
-    struct RingBufferHead head;
-    char buf[STR_BUF_SIZE];
+    struct {
+        struct RingBufferHead head;
+        char buf[STR_BUF_SIZE];
+    } str;
 };
 
 struct InputHandle {
-    struct InputRecordBuf *recs;
-    struct InputStringBuf *str;
+    struct InputBuffer in;
 
     pthread_t thread;
     pthread_mutex_t mutex;
@@ -95,8 +101,7 @@ struct InputHandle {
 
 bool BeginInputThread(
     struct InputHandle *hand,
-    struct InputRecordBuf *in,
-    struct InputStringBuf *str
+    struct InputBuffer *in,
 );
 
 bool EndInputThread(struct InputHandle *hand);
@@ -104,3 +109,5 @@ bool EndInputThread(struct InputHandle *hand);
 bool InputAquire(struct InputHandle *hand);
 
 bool InputRelease(struct InputHandle *hand);
+
+size_t InputString(struct Controller *ctrl, size_t n, char *buf);

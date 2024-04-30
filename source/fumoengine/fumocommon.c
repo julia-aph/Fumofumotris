@@ -1,7 +1,11 @@
-#include "gametime.h"
+#include "fumocommon.h"
 #include <time.h>
 
-#define ONE_E_9 1000000000
+
+size_t MinSize(size_t a, size_t b)
+{
+    return a < b ? a : b;
+}
 
 Time TimeNow()
 {

@@ -3,7 +3,8 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/source/fumoengine/input"
             ],
             "defines": [
                 "_DEBUG",

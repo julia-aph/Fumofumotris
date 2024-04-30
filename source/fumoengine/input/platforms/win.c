@@ -1,9 +1,6 @@
 #include "win.h"
-
 #include <windows.h>
 
-#include "gametime.h"
-#include "input.h"
 #include "parseinput.h"
 #include "ringbuffer.h"
 

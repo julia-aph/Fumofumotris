@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "fumotris.h"
+#include "fumocommon.h"
+
 
 typedef u32 hashtype;
 

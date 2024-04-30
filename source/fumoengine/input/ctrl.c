@@ -4,6 +4,7 @@
 
 #define INIT_SIZE 16
 
+
 bool CreateCtrl(struct Controller *ctrl)
 {
     struct ctrl_bkt *code_bkts = calloc(INIT_SIZE, sizeof(struct ctrl_bkt));
@@ -14,7 +15,6 @@ bool CreateCtrl(struct Controller *ctrl)
         return false;
 
     *ctrl = (struct Controller) {
-        .recs.head = RINGBUF_HEAD_INIT,
         .pending_buf.len = 0,
 
         .axis_vec = (struct ctrl_axis_vec) {
@@ -144,7 +144,7 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
     axis->data = rec->data;
 }
 
-void CtrlPoll(struct Controller *ctrl)
+void CtrlPoll(struct Controller *ctrl, struct InputRecordBuf *recs)
 {
     for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
         struct InputAxis *axis = ctrl->pending_buf.axes[i];
@@ -154,8 +154,8 @@ void CtrlPoll(struct Controller *ctrl)
     }
     ctrl->pending_buf.len = 0;
 
-    for (size_t i = 0; i < ctrl->recs.head.len; i++) {
-        struct InputRecord *rec = &ctrl->recs.buf[i];
+    for (size_t i = 0; i < recs->head.len; i++) {
+        struct InputRecord *rec = &recs->buf[i];
 
         struct InputAxis *axis = find_axis(&ctrl->binds, rec->id);
         if (axis == nullptr)
@@ -165,12 +165,7 @@ void CtrlPoll(struct Controller *ctrl)
         ctrl->pending_buf.axes[ctrl->pending_buf.len++] = axis;
     }
 
-    ctrl->recs.head.len = 0;
-}
-
-size_t CtrlInputString(struct Controller *ctrl, size_t n, char *buf)
-{
-    return RingBufferOut(&STR_BUF_T, n, buf, &ctrl->str.head);
+    recs->head.len = 0;
 }
 
 /*int main() 

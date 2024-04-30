@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "fumotris.h"
-#include "gametime.h"
+#include "fumocommon.h"
 #include "input.h"
+
 
 struct InputAxis {
     Time last_pressed;
@@ -47,9 +47,6 @@ struct ctrl_axis_vec {
 };
 
 struct Controller {
-    struct InputRecordBuf recs;
-    struct InputStringBuf str;
-    
     struct {
         struct InputAxis *axes[IO_BUF_SIZE];
         u8f len;
@@ -68,9 +65,7 @@ bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind);
 
 struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type);
 
-void CtrlPoll(struct Controller *ctrl);
-
-size_t CtrlInputString(struct Controller *ctrl, size_t n, char *buf);
+void CtrlPoll(struct Controller *ctrl, struct InputRecordBuf *recs);
 
 enum ControlCode {
     LEFT,

@@ -1,5 +1,6 @@
 #include "parseinput.h"
 
+
 void ReadButton(struct InputRecord *rec, u16f bind, bool is_down)
 {
     rec->id = (union InputID) { .bind = bind, .type = BUTTON };

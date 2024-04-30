@@ -1,13 +1,12 @@
 #include <iso646.h>
-#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 
-#include "fumotris.h"
+#include "fumocommon.h"
+
 
 struct TChar4 {
     char ch;

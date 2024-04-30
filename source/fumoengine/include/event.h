@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "fumotris.h"
-#include "gametime.h"
+#include "fumocommon.h"
+
 
 union func {
     void (*generic)(void *arg);
