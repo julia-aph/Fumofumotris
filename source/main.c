@@ -45,16 +45,24 @@ int main()
     if (!BeginInputThread(&input_hand, &ctrl.recs, &ctrl.str))
         ErrorExit("Input handle failed to initialize");
 
-    _sleep(1000000);
     while (true) {
         if (!InputAquire(&input_hand))
             ErrorExit("Aquire failed");
             
-        //printf("%u\n", ctrl.recs.head.len);
-        //CtrlPoll(&ctrl);
+        CtrlPoll(&ctrl);
+
+        struct InputAxis *a = CtrlGet(&ctrl, 0, BUTTON);
+        printf("%u", a);
+        printf("\t%u\n", a->is_down);
+
+        char silly[100] = { 0 };
+        CtrlInputString(&ctrl, 100, silly);
+        printf("%s\n", silly);
 
         if (!InputRelease(&input_hand))
             ErrorExit("Release failed");
+
+        _sleep(100);
 
         EventInvokeUpdate(&game.Update, 0);
     }

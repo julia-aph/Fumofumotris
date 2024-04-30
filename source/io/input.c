@@ -4,13 +4,15 @@
 #include "platform.h"
 
 const struct RingBufferT IO_BUF_T = {
-    .LEN = IO_BUF_SIZE,
-    .SIZE = sizeof(struct InputRecord)
+    .OFFSET = offsetof(struct InputRecordBuf, buf),
+    .SIZE = sizeof(struct InputRecord),
+    .LEN = IO_BUF_SIZE
 };
 
 const struct RingBufferT STR_BUF_T = {
-    .LEN = STR_BUF_SIZE,
-    .SIZE = sizeof(char)
+    .OFFSET = offsetof(struct InputStringBuf, buf),
+    .SIZE = sizeof(char),
+    .LEN = STR_BUF_SIZE
 };
 
 void *input_worker(void *arg)
@@ -18,20 +20,13 @@ void *input_worker(void *arg)
     struct InputHandle *hand = arg;
 
     struct InputRecordBuf tmp_recs = { .head.len = 0, .head.start = 0 };
-    struct InputStringBuf tmp_str = { .head.len = 0, .head.start = 0 };
 
     while (!hand->is_terminating) {
-        if (!PlatformReadInput(&tmp_recs, &tmp_str)) {
+        if (!PlatformReadInput(&tmp_recs)) {
             hand->err = true;
             return nullptr;
         }
-        printf("input read, len:%u\n", hand->recs->head.len);
-
-        for (int i = 0; i < hand->recs->head.len; i++) {
-            struct InputRecord *rec = RingBufferGet(&IO_BUF_T, &hand->recs->head, i);
-            printf("\ti:%u, type:%u, but:%u\n", i, rec->id.type, rec->id.bind);
-        }
-
+        
         if (pthread_mutex_lock(&hand->mutex) != 0) {
             hand->err = true;
             return nullptr;
@@ -45,7 +40,6 @@ void *input_worker(void *arg)
         }
 
         RingBufferTransfer(&IO_BUF_T, &hand->recs->head, &tmp_recs.head);
-        RingBufferTransfer(&STR_BUF_T, &hand->str->head, &tmp_str.head);
 
         if (pthread_mutex_unlock(&hand->mutex) != 0) {
             hand->err = true;

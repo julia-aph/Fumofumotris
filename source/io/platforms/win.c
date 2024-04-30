@@ -125,19 +125,14 @@ bool PlatformGetRefreshRate(u16f *out)
     return true;
 }
 
-bool dispatch_rec(
-    struct InputRecord *out,
-    struct InputStringBuf *str,
-    struct win_rec *rec
-) {
-    u8f type = rec->type | (rec->is_mouse & rec->mouse.flags);
+bool dispatch_rec(struct InputRecord *out, struct win_rec *rec) {
+    u8f type = rec->type
+        | (rec->is_mouse & rec->mouse.flags)
+        | (rec->is_key & rec->key.is_down);
 
     switch (type) {
         case KEY_EVENT: {
             ReadButton(out, rec->key.vk_code, rec->key.is_down);
-
-            char *to = RingBufferGet(&STR_BUF_T, &str->head, str->head.len);
-            str->head.len += UCS2ToUTF8(to, rec->key.ucs2_char);
 
             return true;
         }
@@ -166,7 +161,7 @@ bool dispatch_rec(
     return false;
 }
 
-bool PlatformReadInput(struct InputRecordBuf *recs, struct InputStringBuf *str)
+bool PlatformReadInput(struct InputRecordBuf *recs)
 {
     DWORD read_max = RingBufferEmpty(&IO_BUF_T, &recs->head);
     union record win_buf[read_max];
@@ -180,7 +175,7 @@ bool PlatformReadInput(struct InputRecordBuf *recs, struct InputStringBuf *str)
     for (size_t i = 0; i < filled; i++) {
         struct InputRecord *rec = RingBufferNext(&IO_BUF_T, &recs->head);
         
-        if (dispatch_rec(rec, str, &win_buf->native + i)) {
+        if (dispatch_rec(rec, &win_buf->native + i)) {
             rec->time = now;
             recs->head.len += 1;
         }

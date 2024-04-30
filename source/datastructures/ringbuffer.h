@@ -8,13 +8,14 @@
 #include "fumotris.h"
 
 typedef const struct RingBufferT {
-    size_t LEN;
+    size_t OFFSET;
     size_t SIZE;
+    size_t LEN;
 } *const RingBufferT;
 
 struct RingBufferHead {
-    u8f len;
-    u8f start;
+    size_t len;
+    size_t start;
 };
 
 #define RINGBUF_HEAD_INIT ((struct RingBufferHead) { 0, 0 })
@@ -28,6 +29,8 @@ void *RingBufferGet(
 );
 
 void *RingBufferNext(RingBufferT T, struct RingBufferHead *head);
+
+void RingBufferAdd(RingBufferT T, struct RingBufferHead *dest, void *item);
 
 void RingBufferTransfer(
     RingBufferT T,
