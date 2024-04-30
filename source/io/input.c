@@ -20,9 +20,10 @@ void *input_worker(void *arg)
     struct InputHandle *hand = arg;
 
     struct InputRecordBuf tmp_recs = { .head.len = 0, .head.start = 0 };
+    struct InputStringBuf tmp_str = { .head.len = 0, .head.start = 0 };
 
     while (!hand->is_terminating) {
-        if (!PlatformReadInput(&tmp_recs)) {
+        if (!PlatformReadInput(&tmp_recs, &tmp_str)) {
             hand->err = true;
             return nullptr;
         }
@@ -40,6 +41,7 @@ void *input_worker(void *arg)
         }
 
         RingBufferTransfer(&IO_BUF_T, &hand->recs->head, &tmp_recs.head);
+        RingBufferTransfer(&STR_BUF_T, &hand->str->head, &tmp_str.head);
 
         if (pthread_mutex_unlock(&hand->mutex) != 0) {
             hand->err = true;

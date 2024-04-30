@@ -27,6 +27,8 @@ struct Game {
     Time time;
 };
 
+struct Event hi;
+
 int main()
 {
     if (!PlatformInit())
@@ -50,14 +52,6 @@ int main()
             ErrorExit("Aquire failed");
             
         CtrlPoll(&ctrl);
-
-        struct InputAxis *a = CtrlGet(&ctrl, 0, BUTTON);
-        printf("%u", a);
-        printf("\t%u\n", a->is_down);
-
-        char silly[100] = { 0 };
-        CtrlInputString(&ctrl, 100, silly);
-        printf("%s\n", silly);
 
         if (!InputRelease(&input_hand))
             ErrorExit("Release failed");

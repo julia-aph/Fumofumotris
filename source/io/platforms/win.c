@@ -125,43 +125,48 @@ bool PlatformGetRefreshRate(u16f *out)
     return true;
 }
 
-bool dispatch_rec(struct InputRecord *out, struct win_rec *rec) {
-    u8f type = rec->type
-        | (rec->is_mouse & rec->mouse.flags)
-        | (rec->is_key & rec->key.is_down);
+bool dispatch_rec(
+    struct InputRecord *out,
+    struct InputStringBuf *str,
+    struct win_rec *rec
+) {
+    u8f type = rec->type | (rec->is_mouse & rec->mouse.flags);
 
     switch (type) {
-        case KEY_EVENT: {
-            ReadButton(out, rec->key.vk_code, rec->key.is_down);
+    case KEY_EVENT: {
+        ReadButton(out, rec->key.vk_code, rec->key.is_down);
 
-            return true;
-        }
-        case MOUSE_MOVE: {
-            ReadJoystick(out, 0, rec->mouse.pos.x, rec->mouse.pos.y);
+        if (rec->key.is_down)
+            str->head.len += UCS2ToUTF8(str->buf, rec->key.ucs2_char);
 
-            return true;
-        }
-        case MOUSE_VWHEEL: {
-            ReadAxis(out, 0, rec->mouse.but);
+        return true;
+    }
+    case MOUSE_MOVE: {
+        ReadJoystick(out, 0, rec->mouse.pos.x, rec->mouse.pos.y);
 
-            return true;
-        }
-        case MOUSE_HWHEEL: {
-            ReadAxis(out, 1, rec->mouse.but);
+        return true;
+    }
+    case MOUSE_VWHEEL: {
+        ReadAxis(out, 0, rec->mouse.but);
 
-            return true;
-        }
-        case WINDOW_BUFFER_SIZE_EVENT: {
-            // TODO: Handle window resizing
-            
-            return false;
-        }
+        return true;
+    }
+    case MOUSE_HWHEEL: {
+        ReadAxis(out, 1, rec->mouse.but);
+
+        return true;
+    }
+    case WINDOW_BUFFER_SIZE_EVENT: {
+        // TODO: Handle window resizing
+        
+        return false;
+    }
     }
 
     return false;
 }
 
-bool PlatformReadInput(struct InputRecordBuf *recs)
+bool PlatformReadInput(struct InputRecordBuf *recs, struct InputStringBuf *str)
 {
     DWORD read_max = RingBufferEmpty(&IO_BUF_T, &recs->head);
     union record win_buf[read_max];
@@ -175,7 +180,7 @@ bool PlatformReadInput(struct InputRecordBuf *recs)
     for (size_t i = 0; i < filled; i++) {
         struct InputRecord *rec = RingBufferNext(&IO_BUF_T, &recs->head);
         
-        if (dispatch_rec(rec, &win_buf->native + i)) {
+        if (dispatch_rec(rec, str, &win_buf->native + i)) {
             rec->time = now;
             recs->head.len += 1;
         }

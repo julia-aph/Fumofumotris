@@ -156,8 +156,6 @@ void CtrlPoll(struct Controller *ctrl)
 
     for (size_t i = 0; i < ctrl->recs.head.len; i++) {
         struct InputRecord *rec = &ctrl->recs.buf[i];
-        if (rec->id.type == BUTTON and rec->is_down)
-            ctrl->str
 
         struct InputAxis *axis = find_axis(&ctrl->binds, rec->id);
         if (axis == nullptr)
