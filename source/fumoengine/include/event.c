@@ -50,7 +50,7 @@ void EventInvoke(struct Event *event, void *arg)
     }
 }
 
-void EventInvokeUpdate(struct Event *event, u64 dt)
+void EventInvokeUpdate(struct Event *event, Time dt)
 {
     for (size_t i = 0; i < event->len; i++) {
         event->clbks[i].update(dt);

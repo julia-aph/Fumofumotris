@@ -57,49 +57,19 @@ struct Controller {
     struct ctrl_dict binds;
 };
 
-bool CreateCtrl(struct Controller *ctrl);
-
-void FreeCtrl(struct Controller *ctrl);
-
-bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind);
-
-struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type);
-
-void CtrlPoll(struct Controller *ctrl, struct InputRecordBuf *recs);
-
-enum ControlCode {
-    LEFT,
-    RIGHT,
-    SOFT_DROP,
-    HARD_DROP,
-    ROTATE_CCW,
-    ROTATE_CW,
-    ROTATE_180,
-    SWAP,
-    ESC,
-    VSCROLL,
-    HSCROLL,
-    MOUSE
-};
-
 struct ControlBind {
-    enum ControlCode code;
+    int code;
     u16 bind;
-    u8 type;
+    u16 type;
 };
 
-#define CODE_COUNT 12
-/*const struct ControlBind ctrl_binds[12] = {
-    { LEFT, 0x25, BUTTON },
-    { RIGHT, 0x27, BUTTON },
-    { SOFT_DROP, 0x28, BUTTON },
-    { HARD_DROP, 0x20, BUTTON },
-    { ROTATE_CCW, 'Z', BUTTON },
-    { ROTATE_CW, 'X', BUTTON },
-    { ROTATE_180, 'A', BUTTON },
-    { SWAP, 'C', BUTTON },
-    { ESC, 0x1B, BUTTON },
-    { VSCROLL, 0, AXIS },
-    { HSCROLL, 1, AXIS },
-    { MOUSE, 0, JOYSTICK }
-};*/
+
+bool CreateController(struct Controller *ctrl);
+void FreeController(struct Controller *ctrl);
+
+bool ControllerMap(struct Controller *ctrl, u16f code, u16f bind, u16f type);
+
+struct InputAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type);
+
+void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs);
+

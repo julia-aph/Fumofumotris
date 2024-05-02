@@ -13,8 +13,8 @@
 #define STR_BUF_SIZE (IO_BUF_SIZE * 4)
 
 
-extern const struct RingBufferT IO_BUF_T;
-extern const struct RingBufferT STR_BUF_T;
+extern RingBufferT IO_BUF_T;
+extern RingBufferT STR_BUF_T;
 
 
 enum InputType {
@@ -25,15 +25,17 @@ enum InputType {
 };
 
 union InputID {
+    u32 hash;
+
     struct {
         union {
             u16 code;
             u16 bind;
             u16 value;
         };
+        
         u16 type;
     };
-    u32 hash;
 };
 
 
@@ -76,20 +78,19 @@ struct InputRecord {
     };
 };
 
-struct InputBuffer {
-    struct {
-        struct RingBufferHead head;
-        struct InputRecord buf[IO_BUF_SIZE];
-    } recs;
+struct RecordBuffer {
+    struct RingBufferHead head;
+    struct InputRecord buf[IO_BUF_SIZE];
+};
 
-    struct {
-        struct RingBufferHead head;
-        char buf[STR_BUF_SIZE];
-    } str;
+struct StringBuffer {
+    struct RingBufferHead head;
+    char buf[STR_BUF_SIZE];
 };
 
 struct InputHandle {
-    struct InputBuffer in;
+    struct RecordBuffer recs;
+    struct StringBuffer str;
 
     pthread_t thread;
     pthread_mutex_t mutex;
@@ -99,10 +100,7 @@ struct InputHandle {
     bool is_terminating;
 };
 
-bool BeginInputThread(
-    struct InputHandle *hand,
-    struct InputBuffer *in,
-);
+bool BeginInputThread(struct InputHandle *hand);
 
 bool EndInputThread(struct InputHandle *hand);
 
@@ -110,4 +108,4 @@ bool InputAquire(struct InputHandle *hand);
 
 bool InputRelease(struct InputHandle *hand);
 
-size_t InputString(struct Controller *ctrl, size_t n, char *buf);
+size_t InputString(struct InputHandle *hand, size_t n, char *buf);

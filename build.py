@@ -88,7 +88,7 @@ def build(source_path, obj_path, out_path, recompile = False):
         os.system(f"gcc -c {path} -I {' -I '.join(subdirs)} -o {obj_path}\\{name}.o -pthread -Wall -std=c17 -pedantic")
 
     write_checksum_file(checksums_now)
-    print(os.system(f"gcc {obj_path}\\*.o -o {out_path} -pthread -Wall -std=c17 -pedantic"))
+    print(os.system(f"gcc {obj_path}\\*.o -o {out_path} -pthread -Wall -std=c17 -pedantic -g"))
 
 
 build(sys.argv[1], sys.argv[2], sys.argv[3], True)

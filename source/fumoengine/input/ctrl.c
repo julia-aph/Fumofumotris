@@ -5,7 +5,7 @@
 #define INIT_SIZE 16
 
 
-bool CreateCtrl(struct Controller *ctrl)
+bool CreateController(struct Controller *ctrl)
 {
     struct ctrl_bkt *code_bkts = calloc(INIT_SIZE, sizeof(struct ctrl_bkt));
     struct ctrl_bkt *bind_bkts = calloc(INIT_SIZE, sizeof(struct ctrl_bkt));
@@ -36,7 +36,7 @@ bool CreateCtrl(struct Controller *ctrl)
     return true;
 }
 
-void FreeCtrl(struct Controller *ctrl)
+void FreeController(struct Controller *ctrl)
 {
     free(ctrl->codes.bkts);
     free(ctrl->binds.bkts);
@@ -105,7 +105,7 @@ union InputID as_id(u16f value, u16f type) {
     return (union InputID) { .value = value, .type = type };
 }
 
-bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind)
+bool ControllerMap(struct Controller *ctrl, u16f code, u16f bind, u16f type)
 {
     struct ctrl_bkt *code_bkt = find_set(&ctrl->codes, as_id(code, type));
     struct ctrl_bkt *bind_bkt = find_set(&ctrl->binds, as_id(bind, type));
@@ -120,7 +120,7 @@ bool CtrlMap(struct Controller *ctrl, u16f code, u16f type, u16f bind)
     return true;
 }
 
-struct InputAxis *CtrlGet(struct Controller *ctrl, u16f code, u16f type)
+struct InputAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type)
 {
     struct ctrl_bkt *code_bkt = find(&ctrl->codes, as_id(code, type));
     if (code_bkt == nullptr)
@@ -144,16 +144,16 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
     axis->data = rec->data;
 }
 
-void CtrlPoll(struct Controller *ctrl, struct InputRecordBuf *recs)
+void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
 {
-    for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
+    /*for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
         struct InputAxis *axis = ctrl->pending_buf.axes[i];
 
         axis->is_up = false;
         axis->is_down = false;
     }
-    ctrl->pending_buf.len = 0;
-
+    ctrl->pending_buf.len = 0;*/
+    
     for (size_t i = 0; i < recs->head.len; i++) {
         struct InputRecord *rec = &recs->buf[i];
 
@@ -171,31 +171,37 @@ void CtrlPoll(struct Controller *ctrl, struct InputRecordBuf *recs)
 /*int main() 
 {
     struct Controller ctrl;
-    if (!CreateCtrl(&ctrl))
+    if (!CreateController(&ctrl))
         return 1;
 
-    CtrlMap(&ctrl, 123, BUTTON, 111);
-    CtrlMap(&ctrl, 0, BUTTON, 8);
+    ControllerMap(&ctrl, 123, 111, BUTTON);
+    ControllerMap(&ctrl, 0, 8, BUTTON);
     
-    ctrl.buf.recs[ctrl.buf.len++] = (struct InputRecord) {
-        .bind = 111,
-        .type = BUTTON,
+    struct RecordBuffer recs = { .head.len = 0, .head.start = 0 };
+
+    recs.buf[recs.head.len++] = (struct InputRecord) {
+        .but.value = 69,
+
         .is_down = true,
-        .but.value = 69
+
+        .id.bind = 111,
+        .id.type = BUTTON
     };
-    ctrl.buf.recs[ctrl.buf.len++] = (struct InputRecord) {
-        .bind = 8,
-        .type = BUTTON,
+    recs.buf[recs.head.len++] = (struct InputRecord) {
+        .but.value = 1000,
+        
         .is_down = true,
-        .but.value = 1000
+
+        .id.bind = 8,
+        .id.type = BUTTON
     };
 
-    CtrlPoll(&ctrl);
+    ControllerPoll(&ctrl, &recs);
 
-    struct InputAxis *a = CtrlGet(&ctrl, 123, BUTTON);
+    struct InputAxis *a = ControllerGet(&ctrl, 123, BUTTON);
     printf("%u\n", a->but.value);
     
-    struct InputAxis *b = CtrlGet(&ctrl, 0, BUTTON);
+    struct InputAxis *b = ControllerGet(&ctrl, 0, BUTTON);
     printf("%u\n", b->but.value);
 
     printf("success");

@@ -17,6 +17,13 @@ struct RingBufferHead {
     size_t start;
 };
 
+#define RINGBUF_T_INIT(RBUF_STRUCT, RBUF_ITEM, RBUF_LEN) \
+    (&(struct RingBufferT) { \
+        .OFFSET = offsetof(RBUF_STRUCT, buf), \
+        .SIZE = sizeof(RBUF_ITEM), \
+        .LEN = RBUF_LEN \
+    }) \
+
 #define RINGBUF_HEAD_INIT ((struct RingBufferHead) { 0, 0 })
 
 size_t RingBufferEmpty(RingBufferT T, struct RingBufferHead *head);

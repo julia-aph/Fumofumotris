@@ -4,25 +4,25 @@
 #include "platform.h"
 
 
-const struct RingBufferT IO_BUF_T = {
-    .OFFSET = offsetof(struct InputRecordBuf, buf),
-    .SIZE = sizeof(struct InputRecord),
-    .LEN = IO_BUF_SIZE
-};
+RingBufferT IO_BUF_T = RINGBUF_T_INIT(
+    struct RecordBuffer,
+    struct InputRecord,
+    IO_BUF_SIZE
+);
 
-const struct RingBufferT STR_BUF_T = {
-    .OFFSET = offsetof(struct InputStringBuf, buf),
-    .SIZE = sizeof(char),
-    .LEN = STR_BUF_SIZE
-};
+RingBufferT STR_BUF_T = RINGBUF_T_INIT(
+    struct StringBuffer,
+    char,
+    STR_BUF_SIZE
+);
 
 
 void *input_worker(void *arg)
 {
     struct InputHandle *hand = arg;
 
-    struct InputRecordBuf tmp_recs = { .head.len = 0, .head.start = 0 };
-    struct InputStringBuf tmp_str = { .head.len = 0, .head.start = 0 };
+    struct RecordBuffer tmp_recs = { .head.len = 0, .head.start = 0 };
+    struct StringBuffer tmp_str = { .head.len = 0, .head.start = 0 };
 
     while (!hand->is_terminating) {
         if (!PlatformReadInput(&tmp_recs, &tmp_str)) {
@@ -42,8 +42,8 @@ void *input_worker(void *arg)
             }
         }
 
-        RingBufferTransfer(&IO_BUF_T, &hand->recs->head, &tmp_recs.head);
-        RingBufferTransfer(&STR_BUF_T, &hand->str->head, &tmp_str.head);
+        RingBufferTransfer(IO_BUF_T, &hand->recs.head, &tmp_recs.head);
+        RingBufferTransfer(STR_BUF_T, &hand->str.head, &tmp_str.head);
 
         if (pthread_mutex_unlock(&hand->mutex) != 0) {
             hand->err = true;
@@ -54,14 +54,11 @@ void *input_worker(void *arg)
     return nullptr;
 }
 
-bool BeginInputThread(
-    struct InputHandle *hand,
-    struct InputRecordBuf *in,
-    struct InputStringBuf *str
-) {
+bool BeginInputThread(struct InputHandle *hand)
+{
     *hand = (struct InputHandle) {
-        .recs = in,
-        .str = str,
+        .recs.head = RINGBUF_HEAD_INIT,
+        .str.head = RINGBUF_HEAD_INIT,
     
         .err = 0,
         .is_terminating = false,
@@ -114,7 +111,7 @@ bool InputRelease(struct InputHandle *hand)
     return true;
 }
 
-size_t InputString(struct InputStringBuf *str, size_t n, char *buf)
+size_t InputString(struct InputHandle *hand, size_t n, char *buf)
 {
-    return RingBufferOut(&STR_BUF_T, n, buf, &str->head);
+    return RingBufferOut(STR_BUF_T, n, buf, &hand->str.head);
 }

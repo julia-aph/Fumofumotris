@@ -69,11 +69,6 @@ struct win_rec {
     };
 };
 
-union record {
-    struct win_rec native;
-    INPUT_RECORD win;
-};
-
 bool init_handles()
 {
     win.input_hand = GetStdHandle(STD_INPUT_HANDLE);
@@ -123,33 +118,33 @@ bool PlatformGetRefreshRate(u16f *out)
 }
 
 bool dispatch_rec(
-    struct InputRecord *out,
-    struct InputStringBuf *str,
-    struct win_rec *rec
+    struct InputRecord *rec,
+    struct StringBuffer *str,
+    struct win_rec *win
 ) {
-    u8f type = rec->type | (rec->is_mouse & rec->mouse.flags);
+    u8f type = win->type | (win->is_mouse & win->mouse.flags);
 
     switch (type) {
     case KEY_EVENT: {
-        ReadButton(out, rec->key.vk_code, rec->key.is_down);
+        ReadButton(rec, win->key.vk_code, win->key.is_down);
 
-        if (rec->key.is_down)
-            str->head.len += UCS2ToUTF8(str->buf, rec->key.ucs2_char);
+        if (win->key.is_down)
+            str->head.len += UCS2ToUTF8(str->buf, win->key.ucs2_char);
 
         return true;
     }
     case MOUSE_MOVE: {
-        ReadJoystick(out, 0, rec->mouse.pos.x, rec->mouse.pos.y);
+        ReadJoystick(rec, 0, win->mouse.pos.x, win->mouse.pos.y);
 
         return true;
     }
     case MOUSE_VWHEEL: {
-        ReadAxis(out, 0, rec->mouse.but);
+        ReadAxis(rec, 0, win->mouse.but);
 
         return true;
     }
     case MOUSE_HWHEEL: {
-        ReadAxis(out, 1, rec->mouse.but);
+        ReadAxis(rec, 1, win->mouse.but);
 
         return true;
     }
@@ -163,21 +158,30 @@ bool dispatch_rec(
     return false;
 }
 
-bool PlatformReadInput(struct InputRecordBuf *recs, struct InputStringBuf *str)
+size_t read_input(struct win_rec *buf, size_t n)
 {
-    DWORD read_max = RingBufferEmpty(&IO_BUF_T, &recs->head);
-    union record win_buf[read_max];
-    DWORD filled;
+    DWORD len;
+    if (!ReadConsoleInputW(win.input_hand, buf, n, &len))
+        return 0;
+    
+    return len;
+}
 
-    if (!ReadConsoleInputW(win.input_hand, &win_buf->win, read_max, &filled))
+bool PlatformReadInput(struct RecordBuffer *recs, struct StringBuffer *str)
+{
+    size_t n = RingBufferEmpty(IO_BUF_T, &recs->head);
+    struct win_rec buf[n];
+    
+    size_t len = read_input(buf, n);
+    if (len == 0)
         return false;
 
     Time now = TimeNow();
 
-    for (size_t i = 0; i < filled; i++) {
-        struct InputRecord *rec = RingBufferNext(&IO_BUF_T, &recs->head);
+    for (size_t i = 0; i < len; i++) {
+        struct InputRecord *rec = RingBufferNext(IO_BUF_T, &recs->head);
         
-        if (dispatch_rec(rec, str, &win_buf->native + i)) {
+        if (dispatch_rec(rec, str, &buf[i])) {
             rec->time = now;
             recs->head.len += 1;
         }
