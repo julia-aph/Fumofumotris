@@ -40,14 +40,18 @@ void Loop(struct FumoGame *game)
         game->time = TimeNow();
 
         if (!InputAquire(&game->input_hand))
-            ErrorExit("Aquire failed");
+            Panic("Aquire failed");
             
-        //ControllerPoll(&game->ctrl, &game->input_hand.recs);
+        ControllerPoll(&game->ctrl, &game->input_hand.recs);
+        u64 val = ControllerGet(&game->ctrl, LEFT, BUTTON)->is_down;
+        printf("%u\n", val);
 
         if (!InputRelease(&game->input_hand))
-            ErrorExit("Release failed");
+            Panic("Release failed");
 
-        //EventInvokeUpdate(&game->update, 0);
+        EventInvokeUpdate(&game->update, 0);
+
+        _sleep(100);
     }
 }
 

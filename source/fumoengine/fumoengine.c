@@ -2,7 +2,7 @@
 #include "platform.h"
 
 
-void ErrorExit(char *message)
+void Panic(char *message)
 {
     printf(message);
     exit(1);
@@ -11,16 +11,16 @@ void ErrorExit(char *message)
 bool FumoInit(struct FumoGame *game)
 {
     if (!PlatformInit())
-        ErrorExit("Platform failed to initialize");
+        Panic("Platform failed to initialize");
 
     if (!CreateController(&game->ctrl))
-        ErrorExit("Out of memory");
+        Panic("Out of memory");
 
     if (!CreateEvent(&game->update))
-        ErrorExit("Out of memory");
+        Panic("Out of memory");
 
     if (!BeginInputThread(&game->input_hand))
-        ErrorExit("Input handle failed to initialize");
+        Panic("Input handle failed to initialize");
 
     return 0;
 }

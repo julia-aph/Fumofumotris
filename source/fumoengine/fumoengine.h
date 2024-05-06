@@ -17,7 +17,7 @@ struct FumoGame {
 };
 
 
-void ErrorExit(char *message);
+void Panic(char *message);
 
 bool FumoInit(struct FumoGame *game);
 

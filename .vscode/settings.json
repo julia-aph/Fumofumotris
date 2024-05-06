@@ -56,6 +56,8 @@
         "stdlib.h": "c",
         "stdio.h": "c",
         "platform.h": "c",
-        "ringbuffer.h": "c"
+        "ringbuffer.h": "c",
+        "fumoengine.h": "c",
+        "fumocommon.h": "c"
     }
 }

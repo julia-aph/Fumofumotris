@@ -6,6 +6,10 @@
 #define ONE_E_9 1000000000
 
 
+typedef size_t          usize;
+typedef ptrdiff_t       isize;
+
+
 typedef uint8_t         u8;
 typedef uint_fast8_t    u8f;
 
@@ -22,14 +26,14 @@ typedef uint_fast64_t   u64f;
 typedef int8_t          i8;
 typedef int_fast8_t     i8f;
 
-typedef int16_t        i16;
-typedef int_fast16_t   i16f;
+typedef int16_t         i16;
+typedef int_fast16_t    i16f;
 
-typedef int32_t        i32;
-typedef int_fast32_t   i32f;
+typedef int32_t         i32;
+typedef int_fast32_t    i32f;
 
-typedef int64_t        i64;
-typedef int_fast64_t   i64f;
+typedef int64_t         i64;
+typedef int_fast64_t    i64f;
 
 
 typedef u64 Time;

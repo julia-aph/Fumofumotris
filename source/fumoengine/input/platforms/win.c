@@ -161,7 +161,7 @@ bool dispatch_rec(
 size_t read_input(struct win_rec *buf, size_t n)
 {
     DWORD len;
-    if (!ReadConsoleInputW(win.input_hand, buf, n, &len))
+    if (!ReadConsoleInputW(win.input_hand, (INPUT_RECORD *)buf, n, &len))
         return 0;
     
     return len;

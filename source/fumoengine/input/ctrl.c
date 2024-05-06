@@ -146,13 +146,14 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
 
 void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
 {
-    /*for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
+    for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
         struct InputAxis *axis = ctrl->pending_buf.axes[i];
 
         axis->is_up = false;
         axis->is_down = false;
     }
-    ctrl->pending_buf.len = 0;*/
+    
+    ctrl->pending_buf.len = 0;
     
     for (size_t i = 0; i < recs->head.len; i++) {
         struct InputRecord *rec = &recs->buf[i];

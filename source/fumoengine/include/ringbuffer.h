@@ -1,5 +1,6 @@
 #pragma once
 #include <iso646.h>
+#include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -19,7 +20,10 @@ struct RingBufferHead {
 
 #define RINGBUF_T_INIT(RBUF_STRUCT, RBUF_ITEM, RBUF_LEN) \
     (&(struct RingBufferT) { \
-        .OFFSET = offsetof(RBUF_STRUCT, buf), \
+        .OFFSET = offsetof(struct { \
+            struct RingBufferHead head; \
+            RBUF_ITEM item; \
+        }, item), \
         .SIZE = sizeof(RBUF_ITEM), \
         .LEN = RBUF_LEN \
     }) \
