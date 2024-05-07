@@ -1,19 +1,17 @@
 #include "event.h"
 
-#define INIT_CAPACITY 16
-
 
 bool CreateEvent(struct Event *event)
 {
-    void_func *callbacks = malloc(INIT_CAPACITY * sizeof(void_func));
+    struct Method *methods = malloc(16 * sizeof(struct Method));
     
-    if (callbacks == nullptr)
+    if (methods == nullptr)
         return false;
 
     *event = (struct Event) {
-        .callbacks = callbacks,
+        .methods = methods,
         .len = 0,
-        .capacity = INIT_CAPACITY
+        .capacity = 16
     };
 
     return true;
@@ -21,30 +19,34 @@ bool CreateEvent(struct Event *event)
 
 void FreeEvent(struct Event *event)
 {
-    free(event->callbacks);
+    free(event->methods);
 }
 
-bool EventRegister(struct Event *event, void_func callback)
+bool EventRegister(struct Event *event, callback func, void *instance)
 {
     if (event->len == event->capacity) {
-        usize new_size = event->capacity * 2 * sizeof(void_func);
-        void_func *new_callbacks = realloc(event->callbacks, new_size);
+        usize new_size = event->capacity * 2 * sizeof(struct Method);
+        struct Method *new_methods = realloc(event->methods, new_size);
 
-        if (new_callbacks == nullptr)
+        if (new_methods == nullptr)
             return false;
         
-        event->callbacks = new_callbacks;
+        event->methods = new_methods;
         event->capacity = new_size;
     }
 
-    event->callbacks[event->len++] = callback;
+    event->methods[event->len++] = (struct Method) {
+        .func = func,
+        .instance = instance
+    };
     
     return true;
 }
 
-void EventInvoke(struct Event *event, void *args)
+void EventInvoke(struct Event *event, void *state)
 {
     for (usize i = 0; i < event->len; i++) {
-        event->callbacks[i](args);
+        struct Method *method = event->methods + i;
+        method->func(state, method->instance);
     }
 }

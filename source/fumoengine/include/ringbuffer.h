@@ -1,41 +1,39 @@
 #pragma once
-#include <iso646.h>
 #include <stdalign.h>
-#include <stdbool.h>
-#include <stdint.h>
 
 #include "fumocommon.h"
 
-
-typedef const struct RingBufferT {
-    size_t OFFSET;
-    size_t SIZE;
-    size_t LEN;
-} *const RingBufferT;
-
-struct RingBufferHead {
-    size_t len;
-    size_t start;
-};
-
-#define RINGBUF_T_INIT(RBUF_STRUCT, RBUF_ITEM, RBUF_LEN) \
+#define RINGBUF_T(RBUF_ITEM_T, RBUF_LEN) \
     (&(struct RingBufferT) { \
         .OFFSET = offsetof(struct { \
             struct RingBufferHead head; \
-            RBUF_ITEM item; \
+            RBUF_ITEM_T item; \
         }, item), \
-        .SIZE = sizeof(RBUF_ITEM), \
+        .SIZE = sizeof(RBUF_ITEM_T), \
         .LEN = RBUF_LEN \
     }) \
 
 #define RINGBUF_HEAD_INIT ((struct RingBufferHead) { 0, 0 })
 
-size_t RingBufferEmpty(RingBufferT T, struct RingBufferHead *head);
+
+typedef const struct RingBufferT {
+    usize OFFSET;
+    usize SIZE;
+    usize LEN;
+} *const RingBufferT;
+
+struct RingBufferHead {
+    usize len;
+    usize start;
+};
+
+
+usize RingBufferEmpty(RingBufferT T, struct RingBufferHead *head);
 
 void *RingBufferGet(
     RingBufferT T,
     struct RingBufferHead *head,
-    size_t i
+    usize i
 );
 
 void *RingBufferNext(RingBufferT T, struct RingBufferHead *head);
@@ -48,9 +46,9 @@ void RingBufferTransfer(
     struct RingBufferHead *tmp
 );
 
-size_t RingBufferOut(
+usize RingBufferOut(
     RingBufferT T,
-    size_t n,
+    usize n,
     void *dest,
     struct RingBufferHead *src
 );

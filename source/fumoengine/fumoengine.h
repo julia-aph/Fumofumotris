@@ -3,21 +3,27 @@
 #include "event.h"
 #include "fumocommon.h"
 #include "input.h"
+#include "terminal.h"
+#include "vector.h"
 
 
-struct FumoGame {
+struct FumoInstance {
     struct Controller ctrl;
     struct InputHandle input_hand;
+    struct Terminal term;
 
-    struct Event start;
-    struct Event draw;
-    struct Event update;
+    struct Event on_start;
+    struct Event on_update;
 
     nsec time;
+    nsec frametime;
 };
 
 
 void Panic(char *message);
 
-bool FumoInit(struct FumoGame *game);
+bool CreateFumoInstance(struct FumoInstance *game);
 
+bool FumoInstanceHook(struct Vector *vec, update_func update, void *state);
+
+bool FumoInstanceRun(struct FumoInstance *game);

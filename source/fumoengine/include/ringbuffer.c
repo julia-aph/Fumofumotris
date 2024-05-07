@@ -3,26 +3,26 @@
 #include <string.h>
 
 
-void *get_ptr(RingBufferT T, struct RingBufferHead *head, size_t i)
+void *get_ptr(RingBufferT T, struct RingBufferHead *head, usize i)
 {
     u8 *bytes = (u8 *)head;
     return bytes + T->OFFSET + T->SIZE * i;
 }
 
-size_t RingBufferEmpty(RingBufferT T, struct RingBufferHead *head)
+usize RingBufferEmpty(RingBufferT T, struct RingBufferHead *head)
 {
     return T->LEN - head->len;
 }
 
-void *RingBufferGet(RingBufferT T, struct RingBufferHead *head, size_t i)
+void *RingBufferGet(RingBufferT T, struct RingBufferHead *head, usize i)
 {
-    size_t wrap_i = (head->start + i) % T->LEN;
+    usize wrap_i = (head->start + i) % T->LEN;
     return get_ptr(T, head, wrap_i);
 }
 
 void *RingBufferNext(RingBufferT T, struct RingBufferHead *head)
 {
-    size_t wrap_i = (head->start + head->len) % T->LEN;
+    usize wrap_i = (head->start + head->len) % T->LEN;
     return get_ptr(T, head, wrap_i);
 }
 
@@ -37,9 +37,9 @@ void RingBufferTransfer(
     struct RingBufferHead *dest,
     struct RingBufferHead *tmp
 ) {
-    size_t copy_max = min_usize(T->LEN - dest->len, tmp->len);
+    usize copy_max = min_usize(T->LEN - dest->len, tmp->len);
 
-    for (size_t i = 0; i < copy_max; i++) {
+    for (usize i = 0; i < copy_max; i++) {
         void *to = RingBufferGet(T, dest, dest->len + i);
         void *from = RingBufferGet(T, tmp, i);
         memcpy(to, from, T->SIZE);
@@ -49,15 +49,15 @@ void RingBufferTransfer(
     tmp->len -= copy_max;
 }
 
-size_t RingBufferOut(
+usize RingBufferOut(
     RingBufferT T,
-    size_t n,
+    usize n,
     void *dest,
     struct RingBufferHead *src
 ) {
-    size_t copy_max = min_usize(n, src->len);
+    usize copy_max = min_usize(n, src->len);
 
-    for (size_t i = 0; i < copy_max; i++) {
+    for (usize i = 0; i < copy_max; i++) {
         void *to = (u8 *)dest + i * T->SIZE;
         void *from = RingBufferGet(T, src, i);
         memcpy(to, from, T->SIZE);

@@ -22,11 +22,13 @@ struct Terminal {
     usize wid;
     usize hgt;
     
-    struct Char4 *ch4s;
+    struct Char4 *buf;
 };
+
+usize TerminalMaxOut(struct Terminal *term);
 
 bool CreateTerminal(struct Terminal *term, usize wid, usize hgt);
 
 void FreeTerminal(struct Terminal *term);
 
-usize TerminalPrint(char *buf, usize n, struct Terminal *term);
+usize TerminalPrint(struct Terminal *term, char *out, usize n);

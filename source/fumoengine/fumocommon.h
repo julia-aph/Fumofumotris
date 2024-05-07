@@ -1,4 +1,6 @@
 #pragma once
+#include <iso646.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #define nullptr ((void *)0)

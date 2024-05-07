@@ -4,17 +4,8 @@
 #include "platform.h"
 
 
-RingBufferT IO_BUF_T = RINGBUF_T_INIT(
-    struct RecordBuffer,
-    struct InputRecord,
-    IO_BUF_SIZE
-);
-
-RingBufferT STR_BUF_T = RINGBUF_T_INIT(
-    struct StringBuffer,
-    char,
-    STR_BUF_SIZE
-);
+RingBufferT IO_BUF_T = RINGBUF_T(struct InputRecord, IO_BUF_SIZE);
+RingBufferT STR_BUF_T = RINGBUF_T(char, STR_BUF_SIZE);
 
 
 void *input_worker(void *arg)
@@ -54,7 +45,7 @@ void *input_worker(void *arg)
     return nullptr;
 }
 
-bool BeginInputThread(struct InputHandle *hand)
+bool CreateInputThread(struct InputHandle *hand)
 {
     *hand = (struct InputHandle) {
         .recs.head = RINGBUF_HEAD_INIT,

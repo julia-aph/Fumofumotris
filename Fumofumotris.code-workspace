@@ -58,7 +58,9 @@
 			"typeinfo": "cpp",
 			"execution": "cpp",
 			"stdbool.h": "c",
-			"fumoengine.h": "c"
+			"fumoengine.h": "c",
+			"event.h": "c",
+			"fumocommon.h": "c"
 		}
 	}
 }

@@ -120,6 +120,20 @@ bool ControllerMap(struct Controller *ctrl, u16f code, u16f bind, u16f type)
     return true;
 }
 
+bool ControllerMapMulti(
+    struct Controller *ctrl,
+    usize n_maps,
+    struct ControlMapping *maps
+) {
+    for (usize i = 0; i < n_maps; i++) {
+        struct ControlMapping *map = maps + i;
+        if (!ControllerMap(ctrl, map->code, map->bind, map->type))
+            return false;
+    }
+
+    return true;
+}
+
 struct InputAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type)
 {
     struct ctrl_bkt *code_bkt = find(&ctrl->codes, as_id(code, type));

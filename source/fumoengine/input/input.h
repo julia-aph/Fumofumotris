@@ -100,7 +100,7 @@ struct InputHandle {
     bool is_terminating;
 };
 
-bool BeginInputThread(struct InputHandle *hand);
+bool CreateInputThread(struct InputHandle *hand);
 
 bool EndInputThread(struct InputHandle *hand);
 

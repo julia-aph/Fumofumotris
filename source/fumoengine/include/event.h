@@ -1,27 +1,26 @@
 #pragma once
-#include <iso646.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "fumocommon.h"
 
 
-typedef void (*void_func)(void *arg);
+typedef void (*callback)(void *state, void *instance);
 
-typedef void (*invoker_func)(void_func func, void *arg);
-
+struct Method {
+    callback func;
+    void *instance;
+};
 
 struct Event {
-    void_func *callbacks;
+    struct Method *methods;
     usize len;
     usize capacity;
 };
 
 
-bool CreateEvent(struct Event *event);
+bool CreateEvent(struct Event *event, void *state);
 
-bool EventRegister(struct Event *event, void_func callback);
+bool EventRegister(struct Event *event, callback func, void *instance);
 
-void EventInvoke(struct Event *event, void *args);
+void EventInvoke(struct Event *event);

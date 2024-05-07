@@ -57,8 +57,8 @@ struct Controller {
     struct ctrl_dict binds;
 };
 
-struct ControlBind {
-    int code;
+struct ControlMapping {
+    u16 code;
     u16 bind;
     u16 type;
 };
@@ -68,6 +68,12 @@ bool CreateController(struct Controller *ctrl);
 void FreeController(struct Controller *ctrl);
 
 bool ControllerMap(struct Controller *ctrl, u16f code, u16f bind, u16f type);
+
+bool ControllerMapMulti(
+    struct Controller *ctrl,
+    usize n_maps,
+    struct ControlMapping *maps
+);
 
 struct InputAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type);
 
