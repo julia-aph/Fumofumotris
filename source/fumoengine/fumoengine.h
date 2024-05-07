@@ -13,7 +13,7 @@ struct FumoGame {
     struct Event draw;
     struct Event update;
 
-    Time time;
+    nsec time;
 };
 
 

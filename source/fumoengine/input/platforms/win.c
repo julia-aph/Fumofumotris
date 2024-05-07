@@ -176,7 +176,7 @@ bool PlatformReadInput(struct RecordBuffer *recs, struct StringBuffer *str)
     if (len == 0)
         return false;
 
-    Time now = TimeNow();
+    nsec now = TimeNow();
 
     for (size_t i = 0; i < len; i++) {
         struct InputRecord *rec = RingBufferNext(IO_BUF_T, &recs->head);
@@ -195,7 +195,7 @@ bool PlatformStopInput()
     return CancelSynchronousIo(win.input_hand);
 }
 
-bool PlatformWait(Time duration)
+bool PlatformWait(nsec duration)
 {
     LARGE_INTEGER nsec_div_100;
     nsec_div_100.QuadPart = -duration / 100;

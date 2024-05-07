@@ -8,21 +8,20 @@
 #include "fumocommon.h"
 
 
-union func {
-    void (*generic)(void *arg);
-    void (*update)(Time dt);
-};
+typedef void (*void_func)(void *arg);
+
+typedef void (*invoker_func)(void_func func, void *arg);
+
 
 struct Event {
-    union func *clbks;
-    size_t len;
-    size_t capacity;
+    void_func *callbacks;
+    usize len;
+    usize capacity;
 };
+
 
 bool CreateEvent(struct Event *event);
 
-bool EventSubscribe(struct Event *event, union func callback);
+bool EventRegister(struct Event *event, void_func callback);
 
-void EventInvoke(struct Event *event, void *arg);
-
-void EventInvokeUpdate(struct Event *event, Time dt);
+void EventInvoke(struct Event *event, void *args);

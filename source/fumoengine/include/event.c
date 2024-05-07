@@ -2,57 +2,49 @@
 
 #define INIT_CAPACITY 16
 
-size_t clbks_size(size_t capacity) {
-    return sizeof(union func) * capacity;
-}
 
 bool CreateEvent(struct Event *event)
 {
-    union func *callbacks = malloc(clbks_size(INIT_CAPACITY));
+    void_func *callbacks = malloc(INIT_CAPACITY * sizeof(void_func));
     
     if (callbacks == nullptr)
         return false;
 
     *event = (struct Event) {
-        .clbks = callbacks,
+        .callbacks = callbacks,
         .len = 0,
-        .capacity = INIT_CAPACITY,
+        .capacity = INIT_CAPACITY
     };
+
     return true;
 }
 
 void FreeEvent(struct Event *event)
 {
-    free(event->clbks);
+    free(event->callbacks);
 }
 
-bool EventSubscribe(struct Event *event, union func callback)
+bool EventRegister(struct Event *event, void_func callback)
 {
     if (event->len == event->capacity) {
-        size_t new_cap = event->capacity * 2;
-        union func *new_clbks = realloc(event->clbks, clbks_size(new_cap));
+        usize new_size = event->capacity * 2 * sizeof(void_func);
+        void_func *new_callbacks = realloc(event->callbacks, new_size);
 
-        if (new_clbks == nullptr)
+        if (new_callbacks == nullptr)
             return false;
         
-        event->clbks = new_clbks;
-        event->capacity = new_cap;
+        event->callbacks = new_callbacks;
+        event->capacity = new_size;
     }
 
-    event->clbks[event->len++] = callback;
+    event->callbacks[event->len++] = callback;
+    
     return true;
 }
 
-void EventInvoke(struct Event *event, void *arg)
+void EventInvoke(struct Event *event, void *args)
 {
-    for (size_t i = 0; i < event->len; i++) {
-        event->clbks[i].generic(arg);
-    }
-}
-
-void EventInvokeUpdate(struct Event *event, Time dt)
-{
-    for (size_t i = 0; i < event->len; i++) {
-        event->clbks[i].update(dt);
+    for (usize i = 0; i < event->len; i++) {
+        event->callbacks[i](args);
     }
 }

@@ -8,6 +8,13 @@ void Panic(char *message)
     exit(1);
 }
 
+void InvokeUpdate(void_func func, void *arg)
+{
+    struct { nsec frametime; } *args = arg;
+
+    ((update_func)func)(args->frametime);
+}
+
 bool FumoInit(struct FumoGame *game)
 {
     if (!PlatformInit())

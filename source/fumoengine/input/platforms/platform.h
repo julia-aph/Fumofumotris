@@ -20,4 +20,4 @@ bool PlatformReadInput(struct RecordBuffer *recs, struct StringBuffer *str);
 
 bool PlatformStopInput();
 
-bool PlatformWait(Time duration);
+bool PlatformWait(nsec duration);

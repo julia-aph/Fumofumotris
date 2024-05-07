@@ -43,13 +43,13 @@ void Loop(struct FumoGame *game)
             Panic("Aquire failed");
             
         ControllerPoll(&game->ctrl, &game->input_hand.recs);
-        u64 val = ControllerGet(&game->ctrl, LEFT, BUTTON)->is_down;
-        printf("%u\n", val);
 
         if (!InputRelease(&game->input_hand))
             Panic("Release failed");
 
-        EventInvokeUpdate(&game->update, 0);
+        
+
+        EventInvoke(&game->update, 0);
 
         _sleep(100);
     }

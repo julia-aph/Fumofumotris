@@ -10,8 +10,8 @@
 
 
 struct InputAxis {
-    Time last_pressed;
-    Time last_released;
+    nsec last_pressed;
+    nsec last_released;
 
     union {
         struct Button but;

@@ -60,7 +60,7 @@ union InputData {
 
 
 struct InputRecord {
-    Time time;
+    nsec time;
 
     union {
         struct Button but;

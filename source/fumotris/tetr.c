@@ -43,8 +43,8 @@ void TetrMapToTermBuf(struct TetrMap *map, struct Terminal *term)
         size_t map_i = y * map->wid + x;
         size_t buf_i = (y + map->y) * term->wid + (x + map->x) * 2;
 
-        struct Char4 *a = &term->chs[buf_i];
-        struct Char4 *b = &term->chs[buf_i + 1];
+        struct Char4 *a = &term->ch4s[buf_i];
+        struct Char4 *b = &term->ch4s[buf_i + 1];
 
         if (map->blks[map_i] == 0) {
             a->ch = '(';

@@ -36,11 +36,12 @@ typedef int64_t         i64;
 typedef int_fast64_t    i64f;
 
 
-typedef u64 Time;
+typedef u64 nsec;
 
 
-size_t MinSize(size_t a, size_t b);
+size_t min_usize(usize a, usize b);
 
-Time TimeNow();
-
+nsec TimeNow();
 double TimeNowD();
+
+u32 Hash(void *item, usize size);

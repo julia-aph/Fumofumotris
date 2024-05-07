@@ -2,12 +2,12 @@
 #include <time.h>
 
 
-size_t MinSize(size_t a, size_t b)
+usize min_usize(usize a, usize b)
 {
     return a < b ? a : b;
 }
 
-Time TimeNow()
+nsec TimeNow()
 {
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
@@ -21,4 +21,18 @@ double TimeNowD()
     timespec_get(&ts, TIME_UTC);
 
     return ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+}
+
+u32 Hash(void *item, usize size)
+{
+    u8 *data = (u8 *)item;
+
+    u32 h = 98317;
+    for (usize i = 0; i < size; i++) {
+        h ^= data[i];
+        h *= 0x5bd1e995;
+        h ^= h >> 15;
+    }
+
+    return h;
 }
