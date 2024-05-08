@@ -13,10 +13,6 @@
 #define STR_BUF_SIZE (IO_BUF_SIZE * 4)
 
 
-extern RingBufferT IO_BUF_T;
-extern RingBufferT STR_BUF_T;
-
-
 enum InputType {
     BUTTON,
     AXIS,
@@ -100,9 +96,14 @@ struct InputHandle {
     bool is_terminating;
 };
 
+
+extern RingBufferT IO_BUF_T;
+extern RingBufferT STR_BUF_T;
+
+
 bool CreateInputThread(struct InputHandle *hand);
 
-bool EndInputThread(struct InputHandle *hand);
+bool JoinInputThread(struct InputHandle *hand);
 
 bool InputAquire(struct InputHandle *hand);
 

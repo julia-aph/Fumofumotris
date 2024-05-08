@@ -1,6 +1,5 @@
 #include "input.h"
 #include <string.h>
-
 #include "platform.h"
 
 
@@ -8,12 +7,12 @@ RingBufferT IO_BUF_T = RINGBUF_T(struct InputRecord, IO_BUF_SIZE);
 RingBufferT STR_BUF_T = RINGBUF_T(char, STR_BUF_SIZE);
 
 
-void *input_worker(void *arg)
+void *input_worker(void *hand_arg)
 {
-    struct InputHandle *hand = arg;
+    struct InputHandle *hand = hand_arg;
 
-    struct RecordBuffer tmp_recs = { .head.len = 0, .head.start = 0 };
-    struct StringBuffer tmp_str = { .head.len = 0, .head.start = 0 };
+    struct RecordBuffer tmp_recs = { .head = RINGBUF_HEAD_INIT };
+    struct StringBuffer tmp_str = { .head = RINGBUF_HEAD_INIT };
 
     while (!hand->is_terminating) {
         if (!PlatformReadInput(&tmp_recs, &tmp_str)) {
@@ -67,7 +66,7 @@ bool CreateInputThread(struct InputHandle *hand)
     return true;
 }
 
-bool EndInputThread(struct InputHandle *hand)
+bool JoinInputThread(struct InputHandle *hand)
 {
     hand->is_terminating = true;
 

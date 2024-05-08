@@ -1,13 +1,14 @@
 #pragma once
-#include <iso646.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
+#include "dictionary.h"
 #include "fumocommon.h"
 #include "input.h"
 
+
+struct ControlMapping {
+    u16 code;
+    u16 bind;
+    u16 type;
+};
 
 struct ControlAxis {
     nsec last_pressed;
@@ -29,39 +30,14 @@ struct ControlAxis {
     };
 };
 
-struct ctrl_bkt {
-    struct ControlAxis *axis;
-    union InputID id;
-};
-
-struct ctrl_dict {
-    struct ctrl_bkt *bkts;
-    u16f capacity;
-    u16f filled;
-};
-
-struct ctrl_axis_vec {
-    struct ControlAxis *axes;
-    u16f size;
-    u16f len;
-};
-
 struct Controller {
     struct {
-        struct ControlAxis *axes[IO_BUF_SIZE];
+        struct ControlAxis *buf[IO_BUF_SIZE];
         u8f len;
-    } pending_buf;
+    } pending;
 
-    struct ctrl_axis_vec axis_vec;
-    struct ctrl_dict codes;
-    struct ctrl_dict binds;
-};
-
-struct ControlMapping {
-    u16 code;
-    u16 bind;
-    u16 type;
-    struct ControlAxis *axis;
+    struct Dictionary codes;
+    struct Dictionary binds;
 };
 
 
@@ -69,12 +45,16 @@ bool CreateController(struct Controller *ctrl);
 
 void FreeController(struct Controller *ctrl);
 
-bool ControllerMap(struct Controller *ctrl, struct ControlMapping *mapping);
+struct ControlAxis *ControllerMap(
+    struct Controller *ctrl,
+    struct ControlMapping *map
+);
 
 bool ControllerMapMulti(
     struct Controller *ctrl,
     usize n,
-    struct ControlMapping *mappings
+    struct ControlMapping *maps,
+    struct ControlAxis **axis_ptrs
 );
 
 struct ControlAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type);

@@ -2,10 +2,10 @@
 #include "fumoengine.h"
 #include "tetr.h"
 
+#define BINDS_N 12
 
-#define CODE_COUNT 12
 
-enum ControlCode {
+enum FumotrisCode {
     LEFT,
     RIGHT,
     SOFT_DROP,
@@ -20,7 +20,8 @@ enum ControlCode {
     MOUSE
 };
 
-struct ControlMapping mappings_global[12] = {
+
+struct ControlMapping mappings_global[BINDS_N] = {
     { LEFT, 0x25, BUTTON },
     { RIGHT, 0x27, BUTTON },
     { SOFT_DROP, 0x28, BUTTON },
@@ -34,8 +35,6 @@ struct ControlMapping mappings_global[12] = {
     { HSCROLL, 1, AXIS },
     { MOUSE, 0, JOYSTICK }
 };
-
-
 
 const u8 I[16] = {
     0, 0, 0, 0,
