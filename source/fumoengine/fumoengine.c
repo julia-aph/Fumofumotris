@@ -2,9 +2,6 @@
 #include "platform.h"
 
 
-VectorT FUMOSYS_VEC_T = VECTOR_T(struct FumoHook);
-
-
 void Panic(char *message)
 {
     printf(message);
@@ -28,7 +25,7 @@ bool CreateFumoInstance(struct FumoInstance *instance)
     if (!CreateEvent(&instance->on_start))
         Panic("Out of memory");
 
-    if (!CreateEvent(FUMOSYS_VEC_T, &instance->on_update))
+    if (!CreateEvent(&instance->on_update))
         Panic("Out of memory");
 
     instance->time = TimeNow();
@@ -36,28 +33,30 @@ bool CreateFumoInstance(struct FumoInstance *instance)
     return true;
 }
 
-bool FumoInstanceRun(struct FumoInstance *instance)
+bool FumoInstanceRun(struct FumoInstance *inst)
 {
-    usize buf_n = TerminalMaxOut(&instance->term);
+    EventInvoke(&inst->on_start, inst);
+
+    usize buf_n = TerminalMaxOut(&inst->term);
     char *buf = malloc(buf_n);
 
     while (true) {
-        if (!InputAquire(&instance->input_hand))
+        if (!InputAquire(&inst->input_hand))
             Panic("Aquire failed");
             
-        ControllerPoll(&instance->ctrl, &instance->input_hand.recs);
+        ControllerPoll(&inst->ctrl, &inst->input_hand.recs);
 
-        if (!InputRelease(&instance->input_hand))
+        if (!InputRelease(&inst->input_hand))
             Panic("Release failed");
 
         nsec now = TimeNow();
-        instance->frametime = now - instance->time;
-        FumoInvoke(instance, &instance->on_update);
-        instance->time = now;
+        inst->frametime = now - inst->time;
+        EventInvoke(&inst->on_update, inst);
+        inst->time = now;
 
-        TerminalPrint(&instance->term, buf, buf_n);
+        TerminalPrint(&inst->term, buf, buf_n);
         puts(buf);
 
-        _sleep(100);
+        //_sleep(100);
     }
 }

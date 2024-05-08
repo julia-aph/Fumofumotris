@@ -20,7 +20,7 @@ enum ControlCode {
     MOUSE
 };
 
-struct ControlMapping MAPPINGS[12] = {
+struct ControlMapping mappings_global[12] = {
     { LEFT, 0x25, BUTTON },
     { RIGHT, 0x27, BUTTON },
     { SOFT_DROP, 0x28, BUTTON },
@@ -36,10 +36,6 @@ struct ControlMapping MAPPINGS[12] = {
 };
 
 
-struct Fumotris {
-    struct TetrMap board;
-    struct TetrMap piece;
-};
 
 const u8 I[16] = {
     0, 0, 0, 0,

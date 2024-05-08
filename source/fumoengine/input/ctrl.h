@@ -9,7 +9,7 @@
 #include "input.h"
 
 
-struct InputAxis {
+struct ControlAxis {
     nsec last_pressed;
     nsec last_released;
 
@@ -30,7 +30,7 @@ struct InputAxis {
 };
 
 struct ctrl_bkt {
-    struct InputAxis *axis;
+    struct ControlAxis *axis;
     union InputID id;
 };
 
@@ -41,14 +41,14 @@ struct ctrl_dict {
 };
 
 struct ctrl_axis_vec {
-    struct InputAxis *axes;
+    struct ControlAxis *axes;
     u16f size;
     u16f len;
 };
 
 struct Controller {
     struct {
-        struct InputAxis *axes[IO_BUF_SIZE];
+        struct ControlAxis *axes[IO_BUF_SIZE];
         u8f len;
     } pending_buf;
 
@@ -61,21 +61,23 @@ struct ControlMapping {
     u16 code;
     u16 bind;
     u16 type;
+    struct ControlAxis *axis;
 };
 
 
 bool CreateController(struct Controller *ctrl);
+
 void FreeController(struct Controller *ctrl);
 
-bool ControllerMap(struct Controller *ctrl, u16f code, u16f bind, u16f type);
+bool ControllerMap(struct Controller *ctrl, struct ControlMapping *mapping);
 
 bool ControllerMapMulti(
     struct Controller *ctrl,
-    usize n_maps,
-    struct ControlMapping *maps
+    usize n,
+    struct ControlMapping *mappings
 );
 
-struct InputAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type);
+struct ControlAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type);
 
 void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs);
 

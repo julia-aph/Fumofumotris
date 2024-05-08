@@ -22,7 +22,7 @@ void FreeEvent(struct Event *event)
     free(event->methods);
 }
 
-bool EventRegister(struct Event *event, callback func, void *instance)
+bool EventAdd(struct Event *event, handler callback, void *instance)
 {
     if (event->len == event->capacity) {
         usize new_size = event->capacity * 2 * sizeof(struct Method);
@@ -36,7 +36,7 @@ bool EventRegister(struct Event *event, callback func, void *instance)
     }
 
     event->methods[event->len++] = (struct Method) {
-        .func = func,
+        .callback = callback,
         .instance = instance
     };
     
@@ -47,6 +47,6 @@ void EventInvoke(struct Event *event, void *state)
 {
     for (usize i = 0; i < event->len; i++) {
         struct Method *method = event->methods + i;
-        method->func(state, method->instance);
+        method->callback(state, method->instance);
     }
 }

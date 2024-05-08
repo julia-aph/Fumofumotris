@@ -1,5 +1,4 @@
 #include "ctrl.h"
-
 #include "ringbuffer.h"
 
 #define INIT_SIZE 16
@@ -9,7 +8,7 @@ bool CreateController(struct Controller *ctrl)
 {
     struct ctrl_bkt *code_bkts = calloc(INIT_SIZE, sizeof(struct ctrl_bkt));
     struct ctrl_bkt *bind_bkts = calloc(INIT_SIZE, sizeof(struct ctrl_bkt));
-    struct InputAxis *axes = calloc(INIT_SIZE, sizeof(struct InputAxis));
+    struct ControlAxis *axes = calloc(INIT_SIZE, sizeof(struct ControlAxis));
 
     if (code_bkts == nullptr or bind_bkts == nullptr or axes == nullptr)
         return false;
@@ -43,19 +42,19 @@ void FreeController(struct Controller *ctrl)
     free(ctrl->axis_vec.axes);
 }
 
-struct ctrl_bkt *get_bkt(struct ctrl_dict *dict, size_t i) {
+struct ctrl_bkt *get_bkt(struct ctrl_dict *dict, usize i) {
     return &dict->bkts[i];
 }
 
-size_t wrap_index(size_t i, size_t max) {
+usize wrap_index(usize i, usize max) {
     return i % (SIZE_MAX - max + 1);
 }
 
 struct ctrl_bkt *find_set(struct ctrl_dict *dict, union InputID id)
 {
-    size_t i = id.hash % dict->capacity;
+    usize i = id.hash % dict->capacity;
 
-    size_t last = wrap_index(i - 1, dict->capacity);
+    usize last = wrap_index(i - 1, dict->capacity);
     while (i != last) {
         struct ctrl_bkt *bkt = get_bkt(dict, i);
 
@@ -77,9 +76,9 @@ struct ctrl_bkt *find_set(struct ctrl_dict *dict, union InputID id)
 
 struct ctrl_bkt *find(struct ctrl_dict *dict, union InputID id)
 {
-    size_t i = id.hash % dict->capacity;
+    usize i = id.hash % dict->capacity;
 
-    size_t last = wrap_index(i - 1, dict->capacity);
+    usize last = wrap_index(i - 1, dict->capacity);
     while (i != last) {
         struct ctrl_bkt *bkt = get_bkt(dict, i);
 
@@ -92,7 +91,7 @@ struct ctrl_bkt *find(struct ctrl_dict *dict, union InputID id)
     return nullptr;
 }
 
-struct InputAxis *find_axis(struct ctrl_dict *dict, union InputID id)
+struct ControlAxis *find_axis(struct ctrl_dict *dict, union InputID id)
 {
     struct ctrl_bkt *bkt = find(dict, id);
     if (bkt == nullptr)
@@ -105,10 +104,10 @@ union InputID as_id(u16f value, u16f type) {
     return (union InputID) { .value = value, .type = type };
 }
 
-bool ControllerMap(struct Controller *ctrl, u16f code, u16f bind, u16f type)
+bool ControllerMap(struct Controller *ctrl, struct ControlMapping *mapping)
 {
-    struct ctrl_bkt *code_bkt = find_set(&ctrl->codes, as_id(code, type));
-    struct ctrl_bkt *bind_bkt = find_set(&ctrl->binds, as_id(bind, type));
+    struct ctrl_bkt *code_bkt = find_set(&ctrl->codes, as_id(mapping->code, mapping->type));
+    struct ctrl_bkt *bind_bkt = find_set(&ctrl->binds, as_id(mapping->bind, mapping->type));
     
     if (code_bkt->axis == nullptr)
         code_bkt->axis = &ctrl->axis_vec.axes[ctrl->axis_vec.len++];
@@ -116,25 +115,28 @@ bool ControllerMap(struct Controller *ctrl, u16f code, u16f bind, u16f type)
         return false;
     
     bind_bkt->axis = code_bkt->axis;
-    code_bkt->axis->id.type = type;
+    code_bkt->axis->id.type = mapping->type;
+
+    mapping->axis = code_bkt->axis;
     return true;
 }
 
 bool ControllerMapMulti(
     struct Controller *ctrl,
-    usize n_maps,
-    struct ControlMapping *maps
+    usize n,
+    struct ControlMapping *mappings
 ) {
-    for (usize i = 0; i < n_maps; i++) {
-        struct ControlMapping *map = maps + i;
-        if (!ControllerMap(ctrl, map->code, map->bind, map->type))
+    for (usize i = 0; i < n; i++) {
+        struct ControlMapping *mapping = mappings + i;
+
+        if (!ControllerMap(ctrl, mapping))
             return false;
     }
 
     return true;
 }
 
-struct InputAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type)
+struct ControlAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type)
 {
     struct ctrl_bkt *code_bkt = find(&ctrl->codes, as_id(code, type));
     if (code_bkt == nullptr)
@@ -143,7 +145,7 @@ struct InputAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type)
     return code_bkt->axis;
 }
 
-void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
+void dispatch_update(struct ControlAxis *axis, struct InputRecord *rec)
 {
     if (rec->is_down and !axis->is_held) {
         axis->is_down = true;
@@ -160,8 +162,8 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
 
 void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
 {
-    for (size_t i = 0; i < ctrl->pending_buf.len; i++) {
-        struct InputAxis *axis = ctrl->pending_buf.axes[i];
+    for (usize i = 0; i < ctrl->pending_buf.len; i++) {
+        struct ControlAxis *axis = ctrl->pending_buf.axes[i];
 
         axis->is_up = false;
         axis->is_down = false;
@@ -169,10 +171,10 @@ void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
     
     ctrl->pending_buf.len = 0;
     
-    for (size_t i = 0; i < recs->head.len; i++) {
+    for (usize i = 0; i < recs->head.len; i++) {
         struct InputRecord *rec = &recs->buf[i];
 
-        struct InputAxis *axis = find_axis(&ctrl->binds, rec->id);
+        struct ControlAxis *axis = find_axis(&ctrl->binds, rec->id);
         if (axis == nullptr)
             continue;
 

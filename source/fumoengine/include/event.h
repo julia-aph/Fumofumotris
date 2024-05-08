@@ -5,10 +5,10 @@
 #include "fumocommon.h"
 
 
-typedef void (*callback)(void *state, void *instance);
+typedef void (*handler)(void *state, void *instance);
 
 struct Method {
-    callback func;
+    handler callback;
     void *instance;
 };
 
@@ -19,8 +19,8 @@ struct Event {
 };
 
 
-bool CreateEvent(struct Event *event, void *state);
+bool CreateEvent(struct Event *event);
 
-bool EventRegister(struct Event *event, callback func, void *instance);
+bool EventAdd(struct Event *event, handler callback, void *instance);
 
-void EventInvoke(struct Event *event);
+void EventInvoke(struct Event *event, void *state);

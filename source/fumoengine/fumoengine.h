@@ -24,6 +24,4 @@ void Panic(char *message);
 
 bool CreateFumoInstance(struct FumoInstance *game);
 
-bool FumoInstanceHook(struct Vector *vec, update_func update, void *state);
-
 bool FumoInstanceRun(struct FumoInstance *game);
