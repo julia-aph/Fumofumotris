@@ -3,7 +3,7 @@
 
 struct Fumotris {
     struct ControlMapping mappings[BINDS_N];
-    struct ControlAxis *input[BINDS_N];
+    struct InputAxis *input[BINDS_N];
 
     struct TetrMap board;
     struct TetrMap piece;

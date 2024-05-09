@@ -10,7 +10,7 @@ struct ControlMapping {
     u16 type;
 };
 
-struct ControlAxis {
+struct InputAxis {
     nsec last_pressed;
     nsec last_released;
 
@@ -21,22 +21,20 @@ struct ControlAxis {
         union InputData data;
     };
 
-    union InputID id;
+    u16 type;
 
-    struct {
-        u8f is_down : 1;
-        u8f is_held : 1;
-        u8f is_up : 1;
-    };
+    bool is_down;
+    bool is_held;
+    bool is_up;
 };
 
 struct Controller {
-    struct {
-        struct ControlAxis *buf[IO_BUF_SIZE];
-        u8f len;
-    } pending;
+    struct InputAxis *pending[IO_BUF_SIZE];
+    usize pending_len;
 
-    struct Dictionary codes;
+    struct InputAxis *axes;
+    usize axes_len;
+
     struct Dictionary binds;
 };
 
@@ -45,7 +43,7 @@ bool CreateController(struct Controller *ctrl);
 
 void FreeController(struct Controller *ctrl);
 
-struct ControlAxis *ControllerMap(
+struct InputAxis *ControllerMap(
     struct Controller *ctrl,
     struct ControlMapping *map
 );
@@ -54,10 +52,8 @@ bool ControllerMapMulti(
     struct Controller *ctrl,
     usize n,
     struct ControlMapping *maps,
-    struct ControlAxis **axis_ptrs
+    struct InputAxis **axis_ptrs
 );
-
-struct ControlAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type);
 
 void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs);
 

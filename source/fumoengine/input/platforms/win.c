@@ -1,6 +1,5 @@
 #include "win.h"
 #include <windows.h>
-
 #include "parseinput.h"
 #include "ringbuffer.h"
 

@@ -4,84 +4,78 @@
 #define INIT_SIZE 16
 
 
-DictT CODES_T = DICT_T(struct ControlAxis);
-DictT BINDS_T = DICT_T(struct ControlAxis *);
+DictT BIND_T = DICT_T(struct InputAxis *);
 
 
 bool CreateController(struct Controller *ctrl)
 {
-    if (!CreateDictionary(CODES_T, &ctrl->codes))
+    struct InputAxis *axes = calloc(16, sizeof(struct InputAxis));
+
+    if (axes == nullptr)
         return false;
 
-    if (!CreateDictionary(BINDS_T, &ctrl->binds))
+    if (!CreateDictionary(BIND_T, &ctrl->binds))
         return false;
 
-    *ctrl = (struct Controller) { .pending.len = 0 };
+    *ctrl = (struct Controller) {
+        .pending_len = 0,
+        .axes = axes,
+        .axes_len = 0
+    };
 
     return true;
 }
 
 void FreeController(struct Controller *ctrl)
 {
-    FreeDictionary(&ctrl->codes);
+    free(ctrl->axes);
     FreeDictionary(&ctrl->binds);
 }
 
-struct ControlAxis *find_axis(struct ctrl_dict *dict, union InputID id)
+u32 hash_bind(u16f bind, u16f type)
 {
-    struct ctrl_bkt *bkt = find(dict, id);
-    if (bkt == nullptr)
-        return nullptr;
-
-    return bkt->axis;
+    return bind + (type << 16);
 }
 
-struct ControlAxis *ControllerMap(
+struct InputAxis *ControllerMap(
     struct Controller *ctrl,
     struct ControlMapping *map
 ) {
-    struct ControlAxis *axis = DictionarySet(CODES_T, &ctrl->codes, map->code);
-    struct ctrl_bkt *bind_bkt = set(&ctrl->binds, map->bind, map->type);
-    
-    if (code_bkt->axis == nullptr)
-        code_bkt->axis = &ctrl->axis_vec.axes[ctrl->axis_vec.len++];
-    else if (code_bkt->axis == bind_bkt->axis)
-        return nullptr;
-    
-    bind_bkt->axis = code_bkt->axis;
-    code_bkt->axis->id.type = map->type;
+    struct InputAxis *axis = &ctrl->axes[map->code];
 
-    return code_bkt->axis;
+    u32 hash = hash_bind(map->bind, map->type);
+    struct InputAxis **bind = DictionarySet(BIND_T, &ctrl->binds, hash, axis);
+    
+    if (bind == nullptr) {
+        printf("whar");
+        exit(1);
+    }
+
+    *bind = axis;
+    axis->type = map->type;
+
+    return axis;
 }
 
 bool ControllerMapMulti(
     struct Controller *ctrl,
     usize n,
     struct ControlMapping *maps,
-    struct ControlAxis **axis_ptrs
+    struct InputAxis **binds
 ) {
     for (usize i = 0; i < n; i++) {
-        struct ControlAxis *axis = ControllerMap(ctrl, maps + i);
+        struct InputAxis *axis = ControllerMap(ctrl, maps + i);
 
         if (axis == nullptr)
             return false;
 
-        axis_ptrs[i] = axis;
+        binds[i] = axis;
     }
 
     return true;
 }
 
-struct ControlAxis *ControllerGet(struct Controller *ctrl, u16f code, u16f type)
-{
-    struct ctrl_bkt *code_bkt = find(&ctrl->codes, as_id(code, type));
-    if (code_bkt == nullptr)
-        return nullptr;
-
-    return code_bkt->axis;
-}
-
-void dispatch_update(struct ControlAxis *axis, struct InputRecord *rec)
+void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
 {
     if (rec->is_down and !axis->is_held) {
         axis->is_down = true;
@@ -98,24 +92,26 @@ void dispatch_update(struct ControlAxis *axis, struct InputRecord *rec)
 
 void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
 {
-    for (usize i = 0; i < ctrl->pending.len; i++) {
-        struct ControlAxis *axis = ctrl->pending.buf[i];
+    for (usize i = 0; i < ctrl->pending_len; i++) {
+        struct InputAxis *axis = ctrl->pending[i];
 
         axis->is_up = false;
         axis->is_down = false;
     }
     
-    ctrl->pending.len = 0;
+    ctrl->pending_len = 0;
     
     for (usize i = 0; i < recs->head.len; i++) {
-        struct InputRecord *rec = &recs->buf[i];
+        struct InputRecord *rec = recs->buf + i;
+        
+        u32 hash = hash_bind(rec->bind, rec->type);
+        struct InputAxis *axis = DictionaryFind(BIND_T, &ctrl->binds, hash);
 
-        struct ControlAxis *axis = find_axis(&ctrl->binds, rec->id);
         if (axis == nullptr)
             continue;
 
         dispatch_update(axis, rec);
-        ctrl->pending.buf[ctrl->pending.len++] = axis;
+        ctrl->pending[ctrl->pending_len++] = axis;
     }
 
     recs->head.len = 0;

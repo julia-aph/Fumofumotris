@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-
 #include "fumocommon.h"
 #include "ringbuffer.h"
 
@@ -19,21 +18,6 @@ enum InputType {
     JOYSTICK,
     ESCAPE
 };
-
-union InputID {
-    u32 hash;
-
-    struct {
-        union {
-            u16 code;
-            u16 bind;
-            u16 value;
-        };
-        
-        u16 type;
-    };
-};
-
 
 struct Button {
     u64 value;
@@ -54,7 +38,6 @@ union InputData {
     struct Joystick input_js;
 };
 
-
 struct InputRecord {
     nsec time;
 
@@ -65,13 +48,12 @@ struct InputRecord {
         union InputData data;
     };
 
-    union InputID id;
+    u16 bind;
+    u16 type;
     
-    struct {
-        u8f is_down : 1;
-        u8f is_held : 1;
-        u8f is_up : 1;
-    };
+    bool is_down;
+    bool is_held;
+    bool is_up;
 };
 
 struct RecordBuffer {

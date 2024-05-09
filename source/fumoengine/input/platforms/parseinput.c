@@ -3,26 +3,32 @@
 
 void ReadButton(struct InputRecord *rec, u16f bind, bool is_down)
 {
-    rec->id = (union InputID) { .bind = bind, .type = BUTTON };
+    rec->bind = bind;
+    rec->type = BUTTON;
+
     rec->is_down = is_down;
     rec->is_up = !is_down;
 }
 
 void ReadAxis(struct InputRecord *rec, u16f bind, u64 value)
 {
-    rec->id = (union InputID) { .bind = bind, .type = AXIS };
+    rec->bind = bind;
+    rec->type = AXIS;
+    
     rec->axis.value = value;
 }
 
 void ReadJoystick(struct InputRecord *rec, u16f bind, i32 x, i32 y)
 {
-    rec->id = (union InputID) { .bind = bind, .type = JOYSTICK };
+    rec->bind = bind;
+    rec->type = JOYSTICK;
+    
     rec->js.x = x;
     rec->js.y = y;
 }
 
 size_t UCS2ToUTF8(char *buf, u16f ucs2)
-{
+{   
     if (ucs2 < 0xFF) {
         buf[0] = ucs2;
         return 1;
