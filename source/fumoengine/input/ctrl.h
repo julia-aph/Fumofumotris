@@ -4,30 +4,6 @@
 #include "input.h"
 
 
-struct ControlMapping {
-    u16 code;
-    u16 bind;
-    u16 type;
-};
-
-struct InputAxis {
-    nsec last_pressed;
-    nsec last_released;
-
-    union {
-        struct Button but;
-        struct Axis axis;
-        struct Joystick js;
-        union InputData data;
-    };
-
-    u16 type;
-
-    bool is_down;
-    bool is_held;
-    bool is_up;
-};
-
 struct Controller {
     struct InputAxis *pending[IO_BUF_SIZE];
     usize pending_len;
@@ -43,16 +19,14 @@ bool CreateController(struct Controller *ctrl);
 
 void FreeController(struct Controller *ctrl);
 
-struct InputAxis *ControllerMap(
-    struct Controller *ctrl,
-    struct ControlMapping *map
-);
+bool ControllerBind(struct Controller *ctrl, u16 control, u16 code, u16 type);
 
-bool ControllerMapMulti(
+bool ControllerBindMulti(
     struct Controller *ctrl,
     usize n,
-    struct ControlMapping *maps,
-    struct InputAxis **axis_ptrs
+    u16 *controls,
+    u16 *codes,
+    u16 *types
 );
 
 void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs);

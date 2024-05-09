@@ -1,30 +1,29 @@
 #include "parseinput.h"
 
 
-void ReadButton(struct InputRecord *rec, u16f bind, bool is_down)
+void ReadButton(struct InputRecord *rec, u16f code, bool is_down)
 {
-    rec->bind = bind;
+    rec->code = code;
     rec->type = BUTTON;
 
     rec->is_down = is_down;
-    rec->is_up = !is_down;
 }
 
-void ReadAxis(struct InputRecord *rec, u16f bind, u64 value)
+void ReadAxis(struct InputRecord *rec, u16f code, u64 value)
 {
-    rec->bind = bind;
+    rec->code = code;
     rec->type = AXIS;
     
-    rec->axis.value = value;
+    rec->data.axis.value = value;
 }
 
-void ReadJoystick(struct InputRecord *rec, u16f bind, i32 x, i32 y)
+void ReadJoystick(struct InputRecord *rec, u16f code, i32 x, i32 y)
 {
-    rec->bind = bind;
+    rec->code = code;
     rec->type = JOYSTICK;
     
-    rec->js.x = x;
-    rec->js.y = y;
+    rec->data.js.x = x;
+    rec->data.js.y = y;
 }
 
 size_t UCS2ToUTF8(char *buf, u16f ucs2)
@@ -40,8 +39,10 @@ size_t UCS2ToUTF8(char *buf, u16f ucs2)
         return 2;
     }
 
-    buf[0] = 0xE0 + (ucs2 >> 12);
-    buf[1] = 0x80 + ((ucs2 >> 6) & 0x3F);
-    buf[2] = 0x80 + (ucs2 & 0x3F);
-    return 3;
+    else {
+        buf[0] = 0xE0 + (ucs2 >> 12);
+        buf[1] = 0x80 + ((ucs2 >> 6) & 0x3F);
+        buf[2] = 0x80 + (ucs2 & 0x3F);
+        return 3;
+    }
 }

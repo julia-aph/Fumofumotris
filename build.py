@@ -1,9 +1,12 @@
-import os, sys
-import json, hashlib
+import hashlib
+import json
+import os
+import subprocess
+import sys
 
 
-def walk_source(path):
-    source_paths = []
+def walk_source_dir(path: str) -> tuple[list[str], list[str]]:
+    source_paths : list[str] = []
     subdirs = []
 
     for dirpath, dirnames, filenames in os.walk(path):
@@ -55,8 +58,8 @@ def get_object_names(path):
     return object_names
 
 
-def build(source_path, obj_path, out_path, recompile = False):
-    source_paths, subdirs = walk_source(source_path)
+def build(source_path, obj_path, out_path, recompile):
+    source_paths, subdirs = walk_source_dir(source_path)
 
     if recompile:
         result = os.system(f"gcc {' '.join(source_paths)} -I {' -I '.join(subdirs)} -o {out_path} -pthread -Wall -std=c17 -pedantic")
@@ -91,4 +94,4 @@ def build(source_path, obj_path, out_path, recompile = False):
     print(os.system(f"gcc {obj_path}\\*.o -o {out_path} -pthread -Wall -std=c17 -pedantic -g"))
 
 
-build(sys.argv[1], sys.argv[2], sys.argv[3], True)
+build("source/", "objects/", "debug", True)

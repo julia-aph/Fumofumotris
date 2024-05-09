@@ -59,5 +59,6 @@
         "ringbuffer.h": "c",
         "fumoengine.h": "c",
         "fumocommon.h": "c"
-    }
+    },
+    "cmake.configureOnOpen": false
 }
