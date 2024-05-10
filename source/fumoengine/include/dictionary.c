@@ -82,7 +82,7 @@ void *DictionarySet(DictT T, struct Dictionary *dict, u32 key, void *val)
     usize index = key % dict->capacity;
 
     void *bkt = probe_empty_bkt(T, dict, index, key);
-    if (*get_key(T, bkt) == 0)
+    if (*get_key(T, bkt) == 0) 
         set_bkt(T, bkt, key, val);
 
     return bkt;

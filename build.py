@@ -1,28 +1,12 @@
-import hashlib
 import json
-<<<<<<< HEAD
 import subprocess
+from subprocess import PIPE
+from hashlib import md5
 from pathlib import Path
 
 
 GCC = "gcc"
-ARGS = "-fdiagnostics-color -pthread -Wall -std=c17 -pedantic"
-=======
-import os
-import subprocess
-import sys
-
-
-def walk_source_dir(path: str) -> tuple[list[str], list[str]]:
-    source_paths : list[str] = []
-    subdirs = []
-
-    for dirpath, dirnames, filenames in os.walk(path):
-        source_paths += [os.path.join(dirpath, f) for f in filenames if f.endswith(".c")]
-        subdirs.append(dirpath)
-
-    return (source_paths, subdirs)
->>>>>>> 41f57d5ba85e72cf801e8ee91afe55d40d535701
+ARGS = "-fdiagnostics-color -pthread -Wall -std=c17 -pedantic -g"
 
 
 SOURCE_DIR = Path("source/")
@@ -34,59 +18,24 @@ CHECKSUMS = Path("checksums.txt")
 ERRORS = Path("errors.txt")
 
 
-def disk_scan_chksms(sources: list[Path]) -> list[str]:
-    chksms: list[str] = []
-
-    for source in sources:
-        with open(source, "rb") as file:
-            raw = file.read()
-            chksms.append(hashlib.md5(raw).hexdigest())
-
-    return chksms
+def scan_checksums(files: list[Path]) -> list[str]:
+    return (md5(file.read_bytes()).hexdigest() for file in files)
 
 
-def disk_read_chksms(txt: Path) -> tuple[list[Path], list[str]]:
-    sources: list[Path]
-    chksms: list[str]
-
+def read_txt(txt: Path) -> any:
     if not txt.exists():
-        return ([], [])
-
-    with open(txt, "rb") as file:
-        zipped: dict[str, str] = json.loads(file.read())
-
-        sources, chksms = [Path(key) for key in zipped.keys()], zipped.values()
-
-    return (sources, chksms)
+        return []
+    
+    content = txt.read_text("utf-8")
+    return json.loads(content) if content else []
 
 
-<<<<<<< HEAD
-def disk_write_chksms(txt: Path, sources: list[Path], chksms: list[str]) -> None:
-    zipped = {str(source): chksm for source, chksm in zip(sources, chksms)}
-=======
-def build(source_path, obj_path, out_path, recompile):
-    source_paths, subdirs = walk_source_dir(source_path)
->>>>>>> 41f57d5ba85e72cf801e8ee91afe55d40d535701
-
-    with open(txt, "w+") as file:
-        file.write(json.dumps(zipped))
+def write_txt(txt: Path, content) -> None:
+    txt.write_text(json.dumps(content))
 
 
-def filter_chksms(sources, chksms, old_chksms) -> list[Path]:
-    difs = set(chksms).difference(old_chksms)
-    return [sources[chksms.index(dif)] for dif in difs]
-
-
-<<<<<<< HEAD
-def scan_sources(source_dir: Path) -> tuple[list[Path], list[Path]]:
-    sources = [source for source in source_dir.rglob("*.c")]
-    chksms = disk_scan_chksms(sources)
-
-    old_sources, old_chksms = disk_read_chksms(CHECKSUMS)
-    updated_sources = filter_chksms(sources, chksms, old_chksms)
-
-    disk_write_chksms(CHECKSUMS, sources, chksms)
-    return (updated_sources, sources)
+def difference(cur, old, vals):
+    return (vals[cur.index(i)] for i in set(cur) - set(old))
 
 
 def clean_objects(object_dir: Path, sources: list[Path]) -> None:
@@ -99,6 +48,16 @@ def clean_objects(object_dir: Path, sources: list[Path]) -> None:
         objects[object_stems.index(stem)].unlink()
 
 
+def header_dependencies(sources):
+    tasks = []
+    for source in sources:
+        task = subprocess.Popen(f"{GCC} -MMD {source} {ARGS} -o stdout", stdout=PIPE)
+        tasks.append(task)
+
+    for task in tasks:
+        
+
+
 def compile(source: Path, includes: list[Path], object_dir: Path):
     include_arg: str = " ".join(f"-I {dir}" for dir in includes)
     output: Path = object_dir / source.with_suffix(".o").name
@@ -106,19 +65,6 @@ def compile(source: Path, includes: list[Path], object_dir: Path):
     args = f"{GCC} -c {source} {ARGS} {include_arg} -o {output}"
 
     return subprocess.Popen(args, stderr=subprocess.PIPE)
-
-
-def disk_read_errors(txt: Path) -> dict[str, str]:
-    if not txt.exists():
-        return {}
-
-    with open(txt, "rb") as file:
-        return json.loads(file.read())
-    
-
-def disk_write_errors(txt: Path, errs: dict[str, str]):
-    with open(txt, "w+") as file:
-        file.write(json.dumps(errs))
 
 
 def wait_compile_tasks(tasks, updated_sources) -> dict[str, str]:
@@ -136,13 +82,19 @@ def wait_compile_tasks(tasks, updated_sources) -> dict[str, str]:
 
 
 def link(object_dir: Path, output: Path) -> None:
-    subprocess.run(f"{GCC} -g {object_dir}/*.o {ARGS} -o {output}")
+    subprocess.run(f"{GCC} {object_dir}/*.o {ARGS} -o {output}")
 
 
-def build(source_dir: Path, object_dir: Path, output: Path):
-    updated_sources, all_sources = scan_sources(source_dir)
-    includes = [path for path in source_dir.rglob("*") if path.is_dir()]
+def build(src: Path, object_dir: Path, output: Path):
+    includes, headers, sources = zip(map(src.rglob, ["*/", "*.h", "*.c"]))
 
+    headers_cur, sources_cur = map(scan_checksums, (headers, sources))
+    headers_old, sources_old = read_txt(CHECKSUMS)
+
+    headers_updt = difference(headers_cur, headers_old, headers)
+    sources_updt = difference(sources_cur, sources_old, sources)
+
+    dependencies = {}
 
     tasks = []
     for source in updated_sources:
@@ -160,6 +112,3 @@ def build(source_dir: Path, object_dir: Path, output: Path):
 
 if __name__ == "__main__":
     build(SOURCE_DIR, OBJECT_DIR, OUTPUT)
-=======
-build("source/", "objects/", "debug", True)
->>>>>>> 41f57d5ba85e72cf801e8ee91afe55d40d535701
