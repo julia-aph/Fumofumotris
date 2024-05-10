@@ -2,9 +2,6 @@
 
 
 struct Fumotris {
-    struct ControlMapping mappings[BINDS_N];
-    struct InputAxis *input[BINDS_N];
-
     struct TetrMap board;
     struct TetrMap piece;
 };
@@ -15,7 +12,7 @@ void FumotrisStart(void *inst_arg, void *game_arg)
     struct FumoInstance *inst = inst_arg;
     struct Fumotris *game = game_arg;
 
-    ControllerMapMulti(&inst->ctrl, BINDS_N, game->mappings, game->input);
+    ControllerBindMulti(&inst->ctrl, BINDS_N, controls_g, codes_g, types_g);
 
     CreateTetrMap(&game->board, 10, 10);
     CreateTetrMap(&game->piece, 3, 3);
@@ -27,9 +24,10 @@ void FumotrisUpdate(void *inst_arg, void *game_arg)
     struct FumoInstance *inst = inst_arg;
     struct Fumotris *game = game_arg;
 
-    if (game->input[LEFT]->is_down)
+    if (inst->ctrl.axes[LEFT].is_down)
         game->piece.x -= 1;
-    if (game->input[RIGHT]->is_down)
+        
+    if (inst->ctrl.axes[RIGHT].is_down)
         game->piece.x += 1;
 
     TetrMapDraw(&game->board, &inst->term);

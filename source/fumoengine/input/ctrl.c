@@ -32,44 +32,36 @@ void FreeController(struct Controller *ctrl)
     FreeDictionary(&ctrl->binds);
 }
 
-u32 hash_bind(u16f bind, u16f type)
+u32 hash_bind(u16f code, u16f type)
 {
-    return bind + (type << 16);
+    return code | (type << 16);
 }
 
-struct InputAxis *ControllerMap(
-    struct Controller *ctrl,
-    struct ControlMapping *map
-) {
-    struct InputAxis *axis = &ctrl->axes[map->code];
+bool ControllerBind(struct Controller *ctrl, u16 control, u16 code, u16 type)
+{
+    u32 hash = hash_bind(code, type);
 
-    u32 hash = hash_bind(map->bind, map->type);
+    struct InputAxis *axis = &ctrl->axes[control];
     struct InputAxis **bind = DictionarySet(BIND_T, &ctrl->binds, hash, axis);
     
-    if (bind == nullptr) {
-        printf("whar");
-        exit(1);
-    }
+    if (bind == nullptr)
+        return false;
 
     *bind = axis;
-    axis->type = map->type;
 
-    return axis;
+    return true;
 }
 
-bool ControllerMapMulti(
+bool ControllerBindMulti(
     struct Controller *ctrl,
     usize n,
-    struct ControlMapping *maps,
-    struct InputAxis **binds
+    u16 *controls,
+    u16 *codes,
+    u16 *types
 ) {
     for (usize i = 0; i < n; i++) {
-        struct InputAxis *axis = ControllerMap(ctrl, maps + i);
-
-        if (axis == nullptr)
+        if (!ControllerBind(ctrl, controls[i], codes[i], types[i]))
             return false;
-
-        binds[i] = axis;
     }
 
     return true;
@@ -81,7 +73,7 @@ void dispatch_update(struct InputAxis *axis, struct InputRecord *rec)
         axis->is_down = true;
         axis->is_held = true;
         axis->last_pressed = rec->time;
-    } else if (rec->is_up) {
+    } else {
         axis->is_up = true;
         axis->is_held = false;
         axis->last_released = rec->time;
@@ -104,7 +96,7 @@ void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
     for (usize i = 0; i < recs->head.len; i++) {
         struct InputRecord *rec = recs->buf + i;
         
-        u32 hash = hash_bind(rec->bind, rec->type);
+        u32 hash = hash_bind(rec->code, rec->type);
         struct InputAxis *axis = DictionaryFind(BIND_T, &ctrl->binds, hash);
 
         if (axis == nullptr)

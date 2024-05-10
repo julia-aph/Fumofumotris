@@ -33,24 +33,30 @@ struct Joystick {
 };
 
 union InputData {
-    struct Button input_but;
-    struct Axis input_axis;
-    struct Joystick input_js;
+    struct Button but;
+    struct Axis axis;
+    struct Joystick js;
 };
 
 struct InputRecord {
     nsec time;
 
-    union {
-        struct Button but;
-        struct Axis axis;
-        struct Joystick js;
-        union InputData data;
-    };
+    union InputData data;
 
-    u16 bind;
+    u16 code;
     u16 type;
     
+    bool is_down;
+};
+
+struct InputAxis {
+    nsec last_pressed;
+    nsec last_released;
+
+    union InputData data;
+
+    u16 type;
+
     bool is_down;
     bool is_held;
     bool is_up;
