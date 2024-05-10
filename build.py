@@ -1,11 +1,28 @@
 import hashlib
 import json
+<<<<<<< HEAD
 import subprocess
 from pathlib import Path
 
 
 GCC = "gcc"
 ARGS = "-fdiagnostics-color -pthread -Wall -std=c17 -pedantic"
+=======
+import os
+import subprocess
+import sys
+
+
+def walk_source_dir(path: str) -> tuple[list[str], list[str]]:
+    source_paths : list[str] = []
+    subdirs = []
+
+    for dirpath, dirnames, filenames in os.walk(path):
+        source_paths += [os.path.join(dirpath, f) for f in filenames if f.endswith(".c")]
+        subdirs.append(dirpath)
+
+    return (source_paths, subdirs)
+>>>>>>> 41f57d5ba85e72cf801e8ee91afe55d40d535701
 
 
 SOURCE_DIR = Path("source/")
@@ -43,8 +60,13 @@ def disk_read_chksms(txt: Path) -> tuple[list[Path], list[str]]:
     return (sources, chksms)
 
 
+<<<<<<< HEAD
 def disk_write_chksms(txt: Path, sources: list[Path], chksms: list[str]) -> None:
     zipped = {str(source): chksm for source, chksm in zip(sources, chksms)}
+=======
+def build(source_path, obj_path, out_path, recompile):
+    source_paths, subdirs = walk_source_dir(source_path)
+>>>>>>> 41f57d5ba85e72cf801e8ee91afe55d40d535701
 
     with open(txt, "w+") as file:
         file.write(json.dumps(zipped))
@@ -55,6 +77,7 @@ def filter_chksms(sources, chksms, old_chksms) -> list[Path]:
     return [sources[chksms.index(dif)] for dif in difs]
 
 
+<<<<<<< HEAD
 def scan_sources(source_dir: Path) -> tuple[list[Path], list[Path]]:
     sources = [source for source in source_dir.rglob("*.c")]
     chksms = disk_scan_chksms(sources)
@@ -137,3 +160,6 @@ def build(source_dir: Path, object_dir: Path, output: Path):
 
 if __name__ == "__main__":
     build(SOURCE_DIR, OBJECT_DIR, OUTPUT)
+=======
+build("source/", "objects/", "debug", True)
+>>>>>>> 41f57d5ba85e72cf801e8ee91afe55d40d535701
