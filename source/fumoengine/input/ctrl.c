@@ -10,18 +10,15 @@ DictT BIND_T = DICT_T(struct InputAxis *);
 bool CreateController(struct Controller *ctrl)
 {
     struct InputAxis *axes = calloc(16, sizeof(struct InputAxis));
-
     if (axes == nullptr)
         return false;
 
     if (!CreateDictionary(BIND_T, &ctrl->binds))
         return false;
 
-    *ctrl = (struct Controller) {
-        .pending_len = 0,
-        .axes = axes,
-        .axes_len = 0
-    };
+    ctrl->pending_len = 0;
+    ctrl->axes = axes;
+    ctrl->axes_len = 0;
 
     return true;
 }
@@ -42,12 +39,10 @@ bool ControllerBind(struct Controller *ctrl, u16 control, u16 code, u16 type)
     u32 hash = hash_bind(code, type);
 
     struct InputAxis *axis = &ctrl->axes[control];
-    struct InputAxis **bind = DictionarySet(BIND_T, &ctrl->binds, hash, axis);
+    struct InputAxis **bind = DictionarySet(BIND_T, &ctrl->binds, hash, &axis);
     
     if (bind == nullptr)
         return false;
-
-    *bind = axis;
 
     return true;
 }
@@ -97,13 +92,13 @@ void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
         struct InputRecord *rec = recs->buf + i;
         
         u32 hash = hash_bind(rec->code, rec->type);
-        struct InputAxis *axis = DictionaryFind(BIND_T, &ctrl->binds, hash);
+        struct InputAxis **axis = DictionaryFind(BIND_T, &ctrl->binds, hash);
 
         if (axis == nullptr)
             continue;
 
-        dispatch_update(axis, rec);
-        ctrl->pending[ctrl->pending_len++] = axis;
+        dispatch_update(*axis, rec);
+        ctrl->pending[ctrl->pending_len++] = *axis;
     }
 
     recs->head.len = 0;

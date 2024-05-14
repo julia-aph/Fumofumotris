@@ -1,1 +1,1 @@
-{"tetr": "", "ringbuffer": "", "event": "", "ctrl": "", "terminal": "", "fumoengine": "", "parseinput": "", "dictionary": "", "fumocommon": "", "win": "", "input": "", "fumotris": "", "vector": ""}
+{"ringbuffer": "", "event": "", "ctrl": "", "terminal": "", "fumoengine": "", "parseinput": "", "dictionary": "", "fumocommon": "", "win": "", "input": "", "fumotris": "", "vector": "", "tetra": ""}

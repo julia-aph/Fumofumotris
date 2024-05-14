@@ -9,7 +9,6 @@
 
 
 typedef size_t          usize;
-typedef ptrdiff_t       isize;
 
 
 typedef uint8_t         u8;

@@ -11,7 +11,7 @@ ARGS = "-fdiagnostics-color -pthread -Wall -std=c17 -pedantic -g"
 
 SOURCE_DIR = Path("source/")
 OBJECT_DIR = Path("objects/")
-OUTPUT = Path("build/debug")
+OUTPUT = Path("debug")
 
 
 SRC_CHECKSUMS_TXT = Path("build/src_checksums.txt")

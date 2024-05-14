@@ -1,6 +1,6 @@
 #include "fumocommon.h"
 #include "fumoengine.h"
-#include "tetr.h"
+#include "tetra.h"
 
 #define BINDS_N 12
 
@@ -20,6 +20,12 @@ enum FumotrisControls {
     HSCROLL,
 
     MOUSE
+};
+
+struct TetraTemplate {
+    u8 *blks;
+    u16 wid;
+    u16 hgt;
 };
 
 
@@ -74,44 +80,72 @@ u16 types_g[BINDS_N] = {
     JOYSTICK
 };
 
-u8 I[16] = {
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    1, 1, 1, 1,
-    0, 0, 0, 0
+struct TetraTemplate I = {
+    .blks = &(u8) {
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        1, 1, 1, 1,
+        0, 0, 0, 0
+    },
+    .wid = 4,
+    .hgt = 4
 };
 
-u8 O[4] = {
-    1, 1,
-    1, 1
+struct TetraTemplate O = {
+    .blks = &(u8) {
+        1, 1,
+        1, 1
+    },
+    .wid = 2,
+    .hgt = 2
 };
 
-u8 T[9] = {
-    0, 1, 0,
-    1, 1, 1,
-    0, 0, 0
+struct TetraTemplate T = {
+    .blks = &(u8) {
+        0, 1, 0,
+        1, 1, 1,
+        0, 0, 0
+    },
+    .wid = 3,
+    .hgt = 3
 };
 
-u8 S[9] = {
-    0, 1, 1,
-    1, 1, 0,
-    0, 0, 0
+struct TetraTemplate S = {
+    .blks = &(u8) {
+        0, 1, 1,
+        1, 1, 0,
+        0, 0, 0
+    },
+    .wid = 3,
+    .hgt = 3
 };
 
-u8 Z[9] = {
-    1, 1, 0,
-    0, 1, 1,
-    0, 0, 0
+struct TetraTemplate Z = {
+    .blks = &(u8) {
+        1, 1, 0,
+        0, 1, 1,
+        0, 0, 0
+    },
+    .wid = 3,
+    .hgt = 3
 };
 
-u8 J[9] = {
-    1, 0, 0,
-    1, 1, 1,
-    0, 0, 0
+struct TetraTemplate J = {
+    .blks = &(u8) {
+        1, 0, 0,
+        1, 1, 1,
+        0, 0, 0
+    },
+    .wid = 3,
+    .hgt = 3
 };
 
-u8 L[9] = {
-    0, 0, 1,
-    1, 1, 1,
-    0, 0, 0
+struct TetraTemplate L = {
+    .blks = &(u8) {
+        0, 0, 1,
+        1, 1, 1,
+        0, 0, 0
+    },
+    .wid = 3,
+    .hgt = 3
 };

@@ -114,9 +114,9 @@ usize TerminalPrint(struct Terminal *term, char *out, usize n)
     usize len = 7;
     memcpy(out, "\x1b[H\x1b[0m", 7);
 
+    usize i = 0;
     for (usize y = 0; y < term->hgt; y++) {
-    for (usize x = 0; x < term->wid; x++) {
-        usize i = y * term->wid + x;
+    for (usize x = 0; x < term->wid; x++, i++) {
         struct Char4 *ch4 = &term->buf[i];
 
         // DEBUG

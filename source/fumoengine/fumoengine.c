@@ -51,8 +51,9 @@ bool FumoInstanceRun(struct FumoInstance *inst)
 
         nsec now = TimeNow();
         inst->frametime = now - inst->time;
-        EventInvoke(&inst->on_update, inst);
         inst->time = now;
+        
+        EventInvoke(&inst->on_update, inst);
 
         TerminalPrint(&inst->term, buf, buf_n);
         puts(buf);
