@@ -40,7 +40,8 @@ typedef int_fast64_t    i64f;
 typedef u64 nsec;
 
 
-size_t min_usize(usize a, usize b);
+size_t min(usize a, usize b);
+size_t max(usize a, usize b);
 
 nsec TimeNow();
 double TimeNowD();

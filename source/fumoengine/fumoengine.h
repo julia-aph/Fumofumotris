@@ -3,20 +3,21 @@
 #include "event.h"
 #include "fumocommon.h"
 #include "input.h"
-#include "terminal.h"
 #include "vector.h"
 
 
-struct FumoCoroutine {
-    handler callback;
-    nsec timer;
-    nsec period;
+typedef nsec (*coroutine_handler)(void *state, void *instance);
+
+
+struct Coroutine {
+    coroutine_handler callback;
+    void *state;
+    nsec next_scheduled;
 };
 
-struct FumoInstance {
+struct Instance {
     struct Controller ctrl;
     struct InputHandle input_hand;
-    struct Terminal term;
 
     struct Event on_start;
     struct Event on_update;
@@ -31,6 +32,10 @@ struct FumoInstance {
 
 void Panic(char *message);
 
-bool CreateFumoInstance(struct FumoInstance *game);
+bool CoroutineAdd(struct Instance *inst, void *state, coroutine_handler callback);
 
-bool FumoInstanceRun(struct FumoInstance *game);
+void CoroutineTryInvoke(struct Instance *inst, struct Coroutine *co);
+
+bool CreateFumoInstance(struct Instance *game);
+
+bool FumoInstanceRun(struct Instance *game);

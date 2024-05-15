@@ -21,6 +21,6 @@ struct Event {
 
 bool CreateEvent(struct Event *event);
 
-bool EventAdd(struct Event *event, handler callback, void *instance);
+bool EventAdd(struct Event *event, void *instance, handler callback);
 
 void EventInvoke(struct Event *event, void *state);

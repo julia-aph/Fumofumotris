@@ -1,5 +1,6 @@
 #include "fumocommon.h"
 #include "fumoengine.h"
+#include "terminal.h"
 #include "tetra.h"
 
 #define BINDS_N 12
@@ -23,7 +24,7 @@ enum FumotrisControls {
 };
 
 
-u16 controls_g[BINDS_N] = {
+u16 CONTROLS[BINDS_N] = {
     LEFT,
     RIGHT,
     SOFT_DROP,
@@ -40,7 +41,7 @@ u16 controls_g[BINDS_N] = {
     MOUSE,
 };
 
-u16 codes_g[BINDS_N] = {
+u16 CODES[BINDS_N] = {
     0x25,
     0x27,
     0x28,
@@ -57,7 +58,7 @@ u16 codes_g[BINDS_N] = {
     0
 };
 
-u16 types_g[BINDS_N] = {
+u16 TYPES[BINDS_N] = {
     BUTTON,
     BUTTON,
     BUTTON,
@@ -75,7 +76,7 @@ u16 types_g[BINDS_N] = {
 };
 
 struct TetraTemplate I = {
-    .blks = &(u8) {
+    .blks = (u8[16]) {
         0, 0, 0, 0,
         0, 0, 0, 0,
         1, 1, 1, 1,
@@ -86,18 +87,18 @@ struct TetraTemplate I = {
 };
 
 struct TetraTemplate O = {
-    .blks = &(u8) {
-        1, 1,
-        1, 1
+    .blks = (u8[4]) {
+        2, 2,
+        2, 2
     },
     .wid = 2,
     .hgt = 2
 };
 
 struct TetraTemplate T = {
-    .blks = &(u8) {
-        0, 1, 0,
-        1, 1, 1,
+    .blks = (u8[9]) {
+        0, 3, 0,
+        3, 3, 3,
         0, 0, 0
     },
     .wid = 3,
@@ -105,9 +106,9 @@ struct TetraTemplate T = {
 };
 
 struct TetraTemplate S = {
-    .blks = &(u8) {
-        0, 1, 1,
-        1, 1, 0,
+    .blks = (u8[9]) {
+        0, 4, 4,
+        4, 4, 0,
         0, 0, 0
     },
     .wid = 3,
@@ -115,9 +116,9 @@ struct TetraTemplate S = {
 };
 
 struct TetraTemplate Z = {
-    .blks = &(u8) {
-        1, 1, 0,
-        0, 1, 1,
+    .blks = (u8[9]) {
+        5, 5, 0,
+        0, 5, 5,
         0, 0, 0
     },
     .wid = 3,
@@ -125,9 +126,9 @@ struct TetraTemplate Z = {
 };
 
 struct TetraTemplate J = {
-    .blks = &(u8) {
-        1, 0, 0,
-        1, 1, 1,
+    .blks = (u8[9]) {
+        6, 0, 0,
+        6, 6, 6,
         0, 0, 0
     },
     .wid = 3,
@@ -135,11 +136,13 @@ struct TetraTemplate J = {
 };
 
 struct TetraTemplate L = {
-    .blks = &(u8) {
-        0, 0, 1,
-        1, 1, 1,
+    .blks = (u8[9]) {
+        0, 0, 7,
+        7, 7, 7,
         0, 0, 0
     },
     .wid = 3,
     .hgt = 3
 };
+
+struct TetraTemplate *templates[7] = { &I, &O, &T, &S, &Z, &J, &L };

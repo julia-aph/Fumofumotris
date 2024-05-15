@@ -2,16 +2,35 @@
 #include "platform.h"
 
 
-const VectorT FUMOCO_T = VECTOR_T(struct FumoCoroutine);
-
-
 void Panic(char *message)
 {
     printf(message);
     exit(1);
 }
 
-bool CreateFumoInstance(struct FumoInstance *instance)
+bool CoroutineAdd(struct Instance *inst, void *state, coroutine_handler callback)
+{
+    return VectorAdd(&inst->coroutines, &(struct Coroutine) {
+        .callback = callback,
+        .state = state,
+        .next_scheduled = inst->time
+    });
+}
+
+void CoroutineTryInvoke(struct Instance *inst, struct Coroutine *co)
+{
+    while (inst->time > co->next_scheduled) {
+        nsec wait = co->callback(inst, co->state);
+        if (wait == 0) {
+            co->next_scheduled = inst->time;
+            break;
+        } else {
+            co->next_scheduled += wait;
+        }
+    }
+}
+
+bool CreateFumoInstance(struct Instance *instance)
 {
     if (!PlatformInit())
         Panic("Platform failed to initialize");
@@ -22,13 +41,16 @@ bool CreateFumoInstance(struct FumoInstance *instance)
     if (!CreateInputThread(&instance->input_hand))
         Panic("Input handle failed to initialize");
 
-    if (!CreateTerminal(&instance->term, 20, 10))
-        Panic("Out of memory");
-
     if (!CreateEvent(&instance->on_start))
         Panic("Out of memory");
 
     if (!CreateEvent(&instance->on_update))
+        Panic("Out of memory");
+
+    if (!CreateEvent(&instance->on_draw))
+        Panic("Out of memory");
+
+    if (!CreateVector(&instance->coroutines, sizeof(struct Coroutine)))
         Panic("Out of memory");
 
     instance->time = TimeNow();
@@ -36,12 +58,9 @@ bool CreateFumoInstance(struct FumoInstance *instance)
     return true;
 }
 
-bool FumoInstanceRun(struct FumoInstance *inst)
+bool FumoInstanceRun(struct Instance *inst)
 {
     EventInvoke(&inst->on_start, inst);
-
-    usize buf_n = TerminalMaxOut(&inst->term);
-    char *buf = malloc(buf_n);
 
     while (true) {
         // Time
@@ -57,28 +76,17 @@ bool FumoInstanceRun(struct FumoInstance *inst)
 
         if (!InputRelease(&inst->input_hand))
             Panic("Release failed");
-        
+
         // Update
         EventInvoke(&inst->on_update, inst);
+
         for (usize i = 0; i < inst->coroutines.len; i++) {
-            struct FumoCoroutine *co = VectorGet(FUMOCO_T, &inst->coroutines, i);
-            co->callback();
+            CoroutineTryInvoke(inst, VectorGet(&inst->coroutines, i));
         }
 
         // Draw
         EventInvoke(&inst->on_draw, inst);
-        TerminalPrint(&inst->term, buf, buf_n);
-        puts(buf);
 
         //_sleep(100);
     }
-}
-
-bool CoroutineAdd(struct FumoInstance *inst, handler callback, nsec period)
-{
-    return VectorAdd(FUMOCO_T, &inst->coroutines, &(struct FumoCoroutine) {
-        .callback = callback,
-        .timer = 0,
-        .period = period
-    });
 }

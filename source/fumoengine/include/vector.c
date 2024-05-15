@@ -3,12 +3,14 @@
 #include <string.h>
 
 
-bool CreateVector(VectorT T, struct Vector *vec)
+bool CreateVector(struct Vector *vec, usize value_size)
 {
-    void *array = malloc(16 * T->SIZE);
+    void *array = malloc(16 * value_size);
 
     if (array == nullptr)
         return false;
+
+    vec->value_size = value_size;
 
     vec->len = 0;
     vec->capacity = 16;
@@ -22,16 +24,16 @@ void FreeVector(struct Vector *vec)
     free(vec->array);
 }
 
-void *VectorGet(VectorT T, struct Vector *vec, usize i)
+void *VectorGet(struct Vector *vec, usize i)
 {
-    return (u8 *)vec->array + i * T->SIZE;
+    return (u8 *)vec->array + i * vec->value_size;
 }
 
-bool VectorAdd(VectorT T, struct Vector *vec, void *item)
+bool VectorAdd(struct Vector *vec, void *item)
 {
     if (vec->len == vec->capacity) {
         usize new_capacity = vec->capacity * 2;
-        void *new_array = realloc(vec->array, new_capacity * T->SIZE);
+        void *new_array = realloc(vec->array, new_capacity * vec->value_size);
 
         if (new_array == nullptr)
             return false;
@@ -39,7 +41,7 @@ bool VectorAdd(VectorT T, struct Vector *vec, void *item)
         vec->capacity = new_capacity;
     }
 
-    memcpy(VectorGet(T, vec, vec->len++), item, T->SIZE);
+    memcpy(VectorGet(vec, vec->len++), item, vec->value_size);
 
     return true;
 }

@@ -4,16 +4,13 @@
 #define INIT_SIZE 16
 
 
-DictT BIND_T = DICT_T(struct InputAxis *);
-
-
 bool CreateController(struct Controller *ctrl)
 {
     struct InputAxis *axes = calloc(16, sizeof(struct InputAxis));
     if (axes == nullptr)
         return false;
 
-    if (!CreateDictionary(BIND_T, &ctrl->binds))
+    if (!CreateDictionary(&ctrl->binds, sizeof(struct InputAxis*)))
         return false;
 
     ctrl->pending_len = 0;
@@ -39,7 +36,7 @@ bool ControllerBind(struct Controller *ctrl, u16 control, u16 code, u16 type)
     u32 hash = hash_bind(code, type);
 
     struct InputAxis *axis = &ctrl->axes[control];
-    struct InputAxis **bind = DictionarySet(BIND_T, &ctrl->binds, hash, &axis);
+    struct InputAxis **bind = DictionarySet(&ctrl->binds, hash, &axis);
     
     if (bind == nullptr)
         return false;
@@ -92,7 +89,7 @@ void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
         struct InputRecord *rec = recs->buf + i;
         
         u32 hash = hash_bind(rec->code, rec->type);
-        struct InputAxis **axis = DictionaryFind(BIND_T, &ctrl->binds, hash);
+        struct InputAxis **axis = DictionaryFind(&ctrl->binds, hash);
 
         if (axis == nullptr)
             continue;
@@ -103,43 +100,3 @@ void ControllerPoll(struct Controller *ctrl, struct RecordBuffer *recs)
 
     recs->head.len = 0;
 }
-
-/*int main() 
-{
-    struct Controller ctrl;
-    if (!CreateController(&ctrl))
-        return 1;
-
-    ControllerMap(&ctrl, 123, 111, BUTTON);
-    ControllerMap(&ctrl, 0, 8, BUTTON);
-    
-    struct RecordBuffer recs = { .head.len = 0, .head.start = 0 };
-
-    recs.buf[recs.head.len++] = (struct InputRecord) {
-        .but.value = 69,
-
-        .is_down = true,
-
-        .id.bind = 111,
-        .id.type = BUTTON
-    };
-    recs.buf[recs.head.len++] = (struct InputRecord) {
-        .but.value = 1000,
-        
-        .is_down = true,
-
-        .id.bind = 8,
-        .id.type = BUTTON
-    };
-
-    ControllerPoll(&ctrl, &recs);
-
-    struct InputAxis *a = ControllerGet(&ctrl, 123, BUTTON);
-    printf("%u\n", a->but.value);
-    
-    struct InputAxis *b = ControllerGet(&ctrl, 0, BUTTON);
-    printf("%u\n", b->but.value);
-
-    printf("success");
-    return 0;
-}*/

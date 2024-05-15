@@ -4,38 +4,38 @@
 #include "terminal.h"
 
 
-struct Tetra {
+struct TetraTemplate {
     u8 *blks;
 
+    usize wid;
+    usize hgt;
+};
+
+struct Tetra {
+    u8 *blks;
+    
     u16 wid;
     u16 hgt;
 
     i16 x;
     i16 y;
-
-    u8f rot;
+    u8 rot;
 };
 
-struct TetraTemplate {
-    u8 *blks;
-    
-    u16 wid;
-    u16 hgt;
-};
+bool CreateTetra(struct Tetra *tetra, u16 wid, u16 hgt);
 
+void FreeTetra(struct Tetra *tetra);
 
-bool CreateTetra(struct Tetra *map, u16 wid, u16 hgt);
+void TetraSet(struct Tetra *tetra, struct TetraTemplate *template);
 
-void FreeTetra(struct Tetra *map);
+bool TetraIsCollision(struct Tetra *t, struct Tetra *board);
 
-void SetTetra(struct Tetra *map, struct TetraTemplate *t, i16 x, i16 y);
+bool TetraMove(struct Tetra *t, struct Tetra *board, i16 dx, i16 dy);
+
+bool TetraRotate(struct Tetra *t, struct Tetra *board, i8 dr);
+
+void TetraOverlay(struct Tetra *t, struct Tetra *board);
 
 void TetraTerminalClear(struct Tetra *board, struct Terminal *term);
 
-void TetraTerminalDraw(struct Tetra *map, struct Terminal *term);
-
-bool TetraMove(struct Tetra *piece, struct Tetra *board, i16 dx, i16 dy);
-
-bool TetraIsCollision(struct Tetra *piece, struct Tetra *board, i16 dx, i16 dy);
-
-void TetraOverlay(struct Tetra *piece, struct Tetra *board);
+void TetraTerminalDraw(struct Tetra *t, struct Terminal *term);

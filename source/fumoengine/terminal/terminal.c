@@ -5,26 +5,30 @@
 #define MAX_CH4_LEN 11
 
 
-usize TerminalMaxOut(struct Terminal *term)
+usize TerminalMaxOut(usize wid, usize hgt)
 {
     return RESET_STR_LEN
-        + MAX_CH4_LEN * term->wid * term->hgt
-        + term->hgt
+        + MAX_CH4_LEN * wid * hgt
+        + hgt
         + 1;
 }
 
 bool CreateTerminal(struct Terminal *term, usize wid, usize hgt)
 {
     struct Char4 *ch4s = calloc(wid * hgt, sizeof(struct Char4));
-    
     if (ch4s == nullptr)
         return false;
 
-    *term = (struct Terminal) {
-        .wid = wid,
-        .hgt = hgt,
+    char *str = malloc(TerminalMaxOut(wid, hgt));
+    if (str == nullptr)
+        return false;
 
-        .buf = ch4s
+    *term = (struct Terminal) {
+        .buf = ch4s,
+        .str = str,
+
+        .wid = wid,
+        .hgt = hgt       
     };
 
     return true;
@@ -107,12 +111,12 @@ usize ch4_dif_to_str(char *out, struct Color4 *dif, struct Char4 *ch4)
     return len;
 }
 
-usize TerminalPrint(struct Terminal *term, char *out, usize n)
+usize TerminalPrint(struct Terminal *term)
 {
     struct Color4 dif = { 0, 0 };
 
     usize len = 7;
-    memcpy(out, "\x1b[H\x1b[0m", 7);
+    memcpy(term->str, "\x1b[H\x1b[0m", 7);
 
     usize i = 0;
     for (usize y = 0; y < term->hgt; y++) {
@@ -124,11 +128,11 @@ usize TerminalPrint(struct Terminal *term, char *out, usize n)
             ch4->ch = '#';
         // DEBUG
 
-        len += ch4_dif_to_str(out + len, &dif, ch4);
+        len += ch4_dif_to_str(term->str + len, &dif, ch4);
     }
-        out[len++] = '\n';
+        term->str[len++] = '\n';
     }
 
-    out[len] = 0;
+    term->str[len] = 0;
     return len;
 }

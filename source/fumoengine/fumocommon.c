@@ -2,9 +2,14 @@
 #include <time.h>
 
 
-usize min_usize(usize a, usize b)
+usize min(usize a, usize b)
 {
     return a < b ? a : b;
+}
+
+usize max(usize a, usize b)
+{
+    return a > b ? a : b;
 }
 
 nsec TimeNow()

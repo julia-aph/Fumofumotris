@@ -37,7 +37,7 @@ void RingBufferTransfer(
     struct RingBufferHead *dest,
     struct RingBufferHead *tmp
 ) {
-    usize copy_max = min_usize(T->LEN - dest->len, tmp->len);
+    usize copy_max = min(T->LEN - dest->len, tmp->len);
 
     for (usize i = 0; i < copy_max; i++) {
         void *to = RingBufferGet(T, dest, dest->len + i);
@@ -55,7 +55,7 @@ usize RingBufferOut(
     void *dest,
     struct RingBufferHead *src
 ) {
-    usize copy_max = min_usize(n, src->len);
+    usize copy_max = min(n, src->len);
 
     for (usize i = 0; i < copy_max; i++) {
         void *to = (u8 *)dest + i * T->SIZE;

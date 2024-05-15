@@ -60,7 +60,8 @@
 			"stdbool.h": "c",
 			"fumoengine.h": "c",
 			"event.h": "c",
-			"fumocommon.h": "c"
+			"fumocommon.h": "c",
+			"terminal.h": "c"
 		}
 	}
 }

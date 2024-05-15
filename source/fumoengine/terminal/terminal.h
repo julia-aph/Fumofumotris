@@ -1,10 +1,6 @@
 #pragma once
-#include <iso646.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "fumocommon.h"
 
 
@@ -19,16 +15,18 @@ struct Char4 {
 };
 
 struct Terminal {
+    struct Char4 *buf;
+    char *str;
+
     usize wid;
     usize hgt;
     
-    struct Char4 *buf;
 };
 
-usize TerminalMaxOut(struct Terminal *term);
+usize TerminalMaxOut(usize wid, usize hgt);
 
 bool CreateTerminal(struct Terminal *term, usize wid, usize hgt);
 
 void FreeTerminal(struct Terminal *term);
 
-usize TerminalPrint(struct Terminal *term, char *out, usize n);
+usize TerminalPrint(struct Terminal *term);

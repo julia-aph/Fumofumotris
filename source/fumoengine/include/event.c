@@ -22,7 +22,7 @@ void FreeEvent(struct Event *event)
     free(event->methods);
 }
 
-bool EventAdd(struct Event *event, handler callback, void *instance)
+bool EventAdd(struct Event *event, void *instance, handler callback)
 {
     if (event->len == event->capacity) {
         usize new_size = event->capacity * 2 * sizeof(struct Method);
