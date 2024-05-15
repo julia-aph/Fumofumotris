@@ -22,12 +22,6 @@ enum FumotrisControls {
     MOUSE
 };
 
-struct TetraTemplate {
-    u8 *blks;
-    u16 wid;
-    u16 hgt;
-};
-
 
 u16 controls_g[BINDS_N] = {
     LEFT,

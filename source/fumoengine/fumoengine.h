@@ -7,6 +7,12 @@
 #include "vector.h"
 
 
+struct FumoCoroutine {
+    handler callback;
+    nsec timer;
+    nsec period;
+};
+
 struct FumoInstance {
     struct Controller ctrl;
     struct InputHandle input_hand;
@@ -14,6 +20,9 @@ struct FumoInstance {
 
     struct Event on_start;
     struct Event on_update;
+    struct Event on_draw;
+
+    struct Vector coroutines;
 
     nsec time;
     nsec frametime;

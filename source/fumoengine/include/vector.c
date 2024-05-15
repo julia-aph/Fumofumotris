@@ -10,11 +10,9 @@ bool CreateVector(VectorT T, struct Vector *vec)
     if (array == nullptr)
         return false;
 
-    *vec = (struct Vector) {
-        .len = 0,
-        .capacity = 16,
-        .array = array
-    };
+    vec->len = 0;
+    vec->capacity = 16;
+    vec->array = array;
 
     return true;
 }

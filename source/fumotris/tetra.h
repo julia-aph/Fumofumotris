@@ -16,11 +16,19 @@ struct Tetra {
     u8f rot;
 };
 
+struct TetraTemplate {
+    u8 *blks;
+    
+    u16 wid;
+    u16 hgt;
+};
+
+
 bool CreateTetra(struct Tetra *map, u16 wid, u16 hgt);
 
 void FreeTetra(struct Tetra *map);
 
-void SetTetra(struct Tetra *map, u8 *blks, u16 wid, u16 hgt, i16 x, i16 y);
+void SetTetra(struct Tetra *map, struct TetraTemplate *t, i16 x, i16 y);
 
 void TetraTerminalClear(struct Tetra *board, struct Terminal *term);
 

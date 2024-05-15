@@ -24,11 +24,11 @@ void FreeTetra(struct Tetra *tetra)
     free(tetra->blks);
 }
 
-void SetTetra(struct Tetra *map, u8 *blks, u16 wid, u16 hgt, i16 x, i16 y)
+void SetTetra(struct Tetra *map, struct TetraTemplate *t, i16 x, i16 y)
 {
-    map->blks = blks;
-    map->wid = wid;
-    map->hgt = hgt;
+    map->blks = t->blks;
+    map->wid = t->wid;
+    map->hgt = t->hgt;
     
     map->x = x;
     map->y = y;

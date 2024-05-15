@@ -2,6 +2,9 @@
 #include "platform.h"
 
 
+const VectorT FUMOCO_T = VECTOR_T(struct FumoCoroutine);
+
+
 void Panic(char *message)
 {
     printf(message);
@@ -41,6 +44,12 @@ bool FumoInstanceRun(struct FumoInstance *inst)
     char *buf = malloc(buf_n);
 
     while (true) {
+        // Time
+        nsec now = TimeNow();
+        inst->frametime = now - inst->time;
+        inst->time = now;
+
+        // Input
         if (!InputAquire(&inst->input_hand))
             Panic("Aquire failed");
             
@@ -48,16 +57,28 @@ bool FumoInstanceRun(struct FumoInstance *inst)
 
         if (!InputRelease(&inst->input_hand))
             Panic("Release failed");
-
-        nsec now = TimeNow();
-        inst->frametime = now - inst->time;
-        inst->time = now;
         
+        // Update
         EventInvoke(&inst->on_update, inst);
+        for (usize i = 0; i < inst->coroutines.len; i++) {
+            struct FumoCoroutine *co = VectorGet(FUMOCO_T, &inst->coroutines, i);
+            co->callback();
+        }
 
+        // Draw
+        EventInvoke(&inst->on_draw, inst);
         TerminalPrint(&inst->term, buf, buf_n);
         puts(buf);
 
         //_sleep(100);
     }
+}
+
+bool CoroutineAdd(struct FumoInstance *inst, handler callback, nsec period)
+{
+    return VectorAdd(FUMOCO_T, &inst->coroutines, &(struct FumoCoroutine) {
+        .callback = callback,
+        .timer = 0,
+        .period = period
+    });
 }
