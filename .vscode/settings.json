@@ -7,5 +7,6 @@
         "cmath": "c",
         "limits": "c",
         "new": "c"
-    }
+    },
+    "cmake.configureOnOpen": false
 }

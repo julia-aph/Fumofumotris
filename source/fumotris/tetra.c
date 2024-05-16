@@ -132,8 +132,8 @@ void TetraTerminalClear(struct Tetra *board, struct Terminal *term)
     for (usize i = 0; i < board->wid * board->hgt; i++) {
         struct Char4 *block = term->buf + i * 2;
 
-        block[0] = (struct Char4) { .ch = '(', .color.fg = 8 };
-        block[1] = (struct Char4) { .ch = ')', .color.fg = 8 };
+        block[0] = (struct Char4) { .ch = '.', .color.fg = 8 };
+        block[1] = (struct Char4) { .ch = ' ', .color.fg = 8 };
     }
 }
 

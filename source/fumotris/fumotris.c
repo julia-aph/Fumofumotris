@@ -85,7 +85,7 @@ void FumotrisUpdate(struct Instance *inst, struct Fumotris *fumo)
     i16 horizontal = get_horizontal(&inst->ctrl);
 
     if (horizontal != 0 and fumo->last_moved < inst->time) {
-        fumo->last_moved = inst->time + 5e7;
+        fumo->last_moved = inst->time + 1e8;
         TetraMove(&fumo->piece, &fumo->board, horizontal, 0);
     }
 
@@ -96,7 +96,7 @@ void FumotrisUpdate(struct Instance *inst, struct Fumotris *fumo)
         TetraRotate(&fumo->piece, &fumo->board, -1);
 
     if (inst->ctrl.axes[SOFT_DROP].is_held and fumo->last_dropped < inst->time) {
-        fumo->last_dropped = inst->time + 5e7;
+        fumo->last_dropped = inst->time + 1e8;
         TetraMove(&fumo->piece, &fumo->board, 0, 1);
     }
         
@@ -145,3 +145,26 @@ int main()
 
     return 0;
 }
+
+|                        |  NEXT    LINES
+|  [][][]. . . . . . .   |  
+|  [][][]. . . . . . .   |          SCORE
+|  [][][][]. . . . . .   |
+|  [][][]. . . . . . []  |
+|  []. . [][]. . . . []  |
+|  [][][][][][]. . . []  |
+|  . . [][]. . . . . []  |
+|  [][][][]. [][]. [][]  | 
+|  [][][][][][][]. [][]  |
+|  [][][][][][][][][][]  |
+|  [][][][][][][][][][]  |
+|  [][][][][][][][][][]  |
+|  [][][][][][][][][][]  |
+|  [][][][][][][]. [][]  |
+|  . [][][][][][]. . []  |
+|  [][][]. [][][][]. []  |
+|  [][][][][][][][]. []  |
+|  [][][][][][][][]. []  |
+|  . [][][][][][][][][]  |
+|  . [][][][][][][][][]  |
+|________________________|
