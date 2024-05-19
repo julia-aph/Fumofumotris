@@ -30,3 +30,5 @@ bool CreateTerminal(struct Terminal *term, usize wid, usize hgt);
 void FreeTerminal(struct Terminal *term);
 
 usize TerminalPrint(struct Terminal *term);
+
+struct Char4 *TerminalGet(struct Terminal *term, usize x, usize y);

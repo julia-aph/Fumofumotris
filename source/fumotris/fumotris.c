@@ -1,5 +1,6 @@
 #include "fumotris.h"
 #include <stdlib.h>
+#include <string.h>
 
 
 struct Fumotris {
@@ -28,23 +29,30 @@ void shuffle(struct Fumotris *fumo)
     }
 }
 
-void check_clear()
+bool check_clear(struct Tetra *board, usize y)
 {
-    
+    for (usize x = 0; x < board->wid; x++) {
+        if (board->blks[board->wid * y + x] == 0)
+            return false;
+    }
+
+    return true;
+}
+
+void shift_down(struct Tetra *board, usize y)
+{
+    memmove(board->blks + board->wid, board->blks, board->wid * y);
 }
 
 void place(struct Fumotris *fumo)
 {
     TetraOverlay(&fumo->piece, &fumo->board);
 
-    usize lines_cleared = fumo->piece.hgt;
-
+    usize lines_cleared = 0;
     for (usize y = fumo->piece.y; y < fumo->piece.y + fumo->piece.hgt; y++) {
-        for (usize x = 0; x < fumo->board.wid; x++) {
-            if (fumo->board.blks[fumo->board.wid * y + x] == 0) {
-                lines_cleared -= 1;
-                break;
-            }
+        if (check_clear(&fumo->board, y)) {
+            lines_cleared += 1;
+            shift_down(&fumo->board, y);
         }
     }
 
@@ -66,7 +74,25 @@ void FumotrisStart(struct Instance *inst, struct Fumotris *fumo)
 {
     ControllerBindMulti(&inst->ctrl, BINDS_N, CONTROLS, CODES, TYPES);
 
-    CreateTerminal(&fumo->term, 20, 20);
+    CreateTerminal(&fumo->term, 64, 26);
+    FILE *file;
+    file = fopen("fumo.txt", "r");
+    if (file) {
+        signed char ch;
+        usize x = 0;
+        usize y = 0;
+
+        while ((ch = getc(file)) != EOF) {
+            if (ch == '\n') {
+                x = 0;
+                y += 1;
+                continue;
+            }
+
+            fumo->term.buf[fumo->term.wid * y + x++] = (struct Char4) { .ch = ch, .color.fg = 15 };
+        }
+        fclose(file);
+    }
 
     for (usize i = 0; i < 7; i++) 
         fumo->bag[i] = templates[i];
@@ -120,9 +146,11 @@ nsec FumotrisFall(struct Instance *inst, struct Fumotris *fumo)
 
 void FumotrisDraw(struct Instance *inst, struct Fumotris *fumo)
 {
-    TetraTerminalClear(&fumo->board, &fumo->term);
-    TetraTerminalDraw(&fumo->board, &fumo->term);
-    TetraTerminalDraw(&fumo->piece, &fumo->term);
+    TetraTerminalClear(&fumo->board, &fumo->term, 3, 5);
+    TetraTerminalDraw(&fumo->board, &fumo->term, 3, 5);
+
+    TetraTerminalDrawGhost(&fumo->piece, &fumo->board, &fumo->term, 3, 5);
+    TetraTerminalDraw(&fumo->piece, &fumo->term, 3, 5);
 
     TerminalPrint(&fumo->term);
     puts(fumo->term.str);
@@ -130,6 +158,8 @@ void FumotrisDraw(struct Instance *inst, struct Fumotris *fumo)
 
 int main()
 {
+    system("color");
+
     struct Instance inst;
     CreateFumoInstance(&inst);
     
@@ -145,26 +175,3 @@ int main()
 
     return 0;
 }
-
-|                        |  NEXT    LINES
-|  [][][]. . . . . . .   |  
-|  [][][]. . . . . . .   |          SCORE
-|  [][][][]. . . . . .   |
-|  [][][]. . . . . . []  |
-|  []. . [][]. . . . []  |
-|  [][][][][][]. . . []  |
-|  . . [][]. . . . . []  |
-|  [][][][]. [][]. [][]  | 
-|  [][][][][][][]. [][]  |
-|  [][][][][][][][][][]  |
-|  [][][][][][][][][][]  |
-|  [][][][][][][][][][]  |
-|  [][][][][][][][][][]  |
-|  [][][][][][][]. [][]  |
-|  . [][][][][][]. . []  |
-|  [][][]. [][][][]. []  |
-|  [][][][][][][][]. []  |
-|  [][][][][][][][]. []  |
-|  . [][][][][][][][][]  |
-|  . [][][][][][][][][]  |
-|________________________|

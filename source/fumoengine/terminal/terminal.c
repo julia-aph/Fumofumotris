@@ -118,11 +118,9 @@ usize TerminalPrint(struct Terminal *term)
     usize len = 7;
     memcpy(term->str, "\x1b[H\x1b[0m", 7);
 
-    usize i = 0;
+    struct Char4 *ch4 = term->buf;
     for (usize y = 0; y < term->hgt; y++) {
-    for (usize x = 0; x < term->wid; x++, i++) {
-        struct Char4 *ch4 = &term->buf[i];
-
+    for (usize x = 0; x < term->wid; x++, ch4++) {
         // DEBUG
         if (ch4->ch == 0)
             ch4->ch = '#';
@@ -135,4 +133,9 @@ usize TerminalPrint(struct Terminal *term)
 
     term->str[len] = 0;
     return len;
+}
+
+struct Char4 *TerminalGet(struct Terminal *term, usize x, usize y)
+{
+    return term->buf + term->wid * y + x;
 }

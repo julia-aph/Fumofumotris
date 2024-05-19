@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 GCC = "gcc"
-ARGS = "-fdiagnostics-color -pthread -Wall -std=c17 -pedantic -g"
+ARGS = "-fdiagnostics-color -pthread -Wall -std=c17 -pedantic -Os"
 
 
 SOURCE_DIR = Path("source/")

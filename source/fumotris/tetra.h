@@ -36,6 +36,8 @@ bool TetraRotate(struct Tetra *t, struct Tetra *board, i8 dr);
 
 void TetraOverlay(struct Tetra *t, struct Tetra *board);
 
-void TetraTerminalClear(struct Tetra *board, struct Terminal *term);
+void TetraTerminalClear(struct Tetra *board, struct Terminal *term, u16 OFS_X, u16 OFS_Y);
 
-void TetraTerminalDraw(struct Tetra *t, struct Terminal *term);
+void TetraTerminalDraw(struct Tetra *piece, struct Terminal *term, u16 OFS_X, u16 OFS_Y);
+
+void TetraTerminalDrawGhost(struct Tetra *t, struct Tetra *board, struct Terminal *term, u16 OFS_X, u16 OFS_Y);

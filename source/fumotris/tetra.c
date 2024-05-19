@@ -59,14 +59,14 @@ usize rotate_index(usize i, usize wid, u8 rot)
     return 0;
 }
 
-bool TetraIsCollision(struct Tetra *t, struct Tetra *board)
+bool TetraIsCollision(struct Tetra *piece, struct Tetra *board)
 {
     usize i = 0;
-    for (i16 y = t->y; y < t->y + t->hgt; y++) {
-    for (i16 x = t->x; x < t->x + t->wid; x++, i++) {
-        usize rot_i = rotate_index(i, t->wid, t->rot);
+    for (i16 y = piece->y; y < piece->y + piece->hgt; y++) {
+    for (i16 x = piece->x; x < piece->x + piece->wid; x++, i++) {
+        usize rot_i = rotate_index(i, piece->wid, piece->rot);
 
-        if(t->blks[rot_i] == 0)
+        if(piece->blks[rot_i] == 0)
             continue;
 
         if(x < 0 or x >= board->wid or y < 0 or y >= board->hgt)
@@ -127,34 +127,57 @@ void TetraOverlay(struct Tetra *t, struct Tetra *board)
     }
 }
 
-void TetraTerminalClear(struct Tetra *board, struct Terminal *term)
+void TetraTerminalClear(struct Tetra *board, struct Terminal *term, u16 OFS_X, u16 OFS_Y)
 {
-    for (usize i = 0; i < board->wid * board->hgt; i++) {
-        struct Char4 *block = term->buf + i * 2;
+    for (i16 y = board->y; y < board->y + board->hgt; y++) {
+    for (i16 x = board->x; x < board->x + board->wid; x++) {
+        struct Char4 *ch4 = TerminalGet(term, (x * 2) + OFS_X, y + OFS_Y);
 
-        block[0] = (struct Char4) { .ch = '.', .color.fg = 8 };
-        block[1] = (struct Char4) { .ch = ' ', .color.fg = 8 };
+        ch4[0] = (struct Char4) { .ch = '.', .color.fg = 8 };
+        ch4[1] = (struct Char4) { .ch = ' ', .color.fg = 8 };
+    }
     }
 }
 
-void TetraTerminalDraw(struct Tetra *t, struct Terminal *term)
+void TetraTerminalDraw(struct Tetra *piece, struct Terminal *term, u16 OFS_X, u16 OFS_Y)
 {
     static const u8f blk_colors[8] = { 8, 14, 11, 13, 10, 9, 12, 3 };
 
     usize i = 0;
-    for (usize y = 0; y < t->hgt; y++) {
-    for (usize x = 0; x < t->wid; x++, i++) {
-        usize rot_i = rotate_index(i, t->wid, t->rot);
+    for (i16 y = piece->y; y < piece->y + piece->hgt; y++) {
+    for (i16 x = piece->x; x < piece->x + piece->wid; x++, i++) {
+        usize rot_i = rotate_index(i, piece->wid, piece->rot);
 
-        if (t->blks[rot_i] == 0)
+        if (piece->blks[rot_i] == 0)
             continue;
 
-        usize term_i = (y + t->y) * term->wid + (x + t->x) * 2;
-        struct Char4 *block = term->buf + term_i;
+        struct Char4 *ch4 = TerminalGet(term, (x * 2) + OFS_X, y + OFS_Y);
         
-        u8 fg = blk_colors[t->blks[rot_i]];
-        block[0] = (struct Char4) { .ch = '[', .color.fg = fg };
-        block[1] = (struct Char4) { .ch = ']', .color.fg = fg };
+        u8 fg = blk_colors[piece->blks[rot_i]];
+
+        ch4[0] = (struct Char4) { .ch = '[', .color.fg = fg };
+        ch4[1] = (struct Char4) { .ch = ']', .color.fg = fg };
+    }
+    }
+}
+
+void TetraTerminalDrawGhost(struct Tetra *t, struct Tetra *board, struct Terminal *term, u16 OFS_X, u16 OFS_Y)
+{
+    struct Tetra ghost = *t;
+    while(TetraMove(&ghost, board, 0, 1));
+
+    usize i = 0;
+    for (i16 y = ghost.y; y < ghost.y + ghost.hgt; y++) {
+    for (i16 x = ghost.x; x < ghost.x + ghost.wid; x++, i++) {
+        usize rot_i = rotate_index(i, ghost.wid, ghost.rot);
+        
+        if (ghost.blks[rot_i] == 0)
+            continue;
+
+        struct Char4 *ch4 = TerminalGet(term, (x * 2) + OFS_X, y + OFS_Y);
+
+        ch4[0] = (struct Char4) { .ch = '[', .color.fg = 8 };
+        ch4[1] = (struct Char4) { .ch = ']', .color.fg = 8 };
     }
     }
 }
